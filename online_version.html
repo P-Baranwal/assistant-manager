@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignment Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="app">
+        <header>
+            <div class="stat-bar" id="stat-bar">
+                <div class="stat-item"><span class="stat-value" id="stat-total">0</span><span class="stat-label">Total</span></div>
+                <div class="stat-item"><span class="stat-value" id="stat-due">0</span><span class="stat-label">This Week</span></div>
+                <div class="stat-item"><span class="stat-value" id="stat-overdue">0</span><span class="stat-label">Overdue</span></div>
+                <div class="stat-item"><span class="stat-value" id="stat-done">0</span><span class="stat-label">Completed</span></div>
+            </div>
+            <div class="header-actions">
+                <span id="ollama-status" class="status-dot tooltip" title="Checking AI status..."></span>
+                <button class="btn" data-action="view:settings">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+                </button>
+                <button class="btn btn-primary" data-action="view:add">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> Add
+                </button>
+            </div>
+        </header>
+
+        <!-- VIEW: Dashboard -->
+        <main id="view-dashboard" class="view">
+            <div id="active-assignments"></div>
+            
+            <div class="mt-8">
+                <button class="btn" id="toggle-completed" data-action="toggle-completed" style="width: 100%; justify-content: space-between;">
+                    Completed Assignments <span id="completed-count">(0)</span>
+                </button>
+                <div id="completed-assignments" class="hidden mt-4"></div>
+            </div>
+        </main>
+
+        <!-- VIEW: Add Assignment -->
+        <main id="view-add" class="view hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2>Add Assignment</h2>
+                <button class="btn" data-action="view:dashboard">Cancel</button>
+            </div>
+
+            <div id="add-entry-state">
+                <div class="tabs">
+                    <div class="tab active" data-action="tab:paste">Paste Text</div>
+                    <div class="tab" data-action="tab:upload">Upload PDF</div>
+                    <div class="tab" data-action="tab:manual">Manual</div>
+                </div>
+
+                <div id="tab-content-paste" class="tab-content">
+                    <textarea class="textarea" id="add-paste-text" placeholder="Paste the full assignment prompt or description here..."></textarea>
+                    <button class="btn btn-primary mt-4" data-action="analyze:paste">Analyze & Preview</button>
+                </div>
+                
+                <div id="tab-content-upload" class="tab-content hidden">
+                    <div class="upload-zone card" id="upload-drop-zone">
+                        <input type="file" id="add-upload-file" accept="application/pdf" style="display:none">
+                        <div class="upload-zone-inner" id="upload-zone-inner">
+                            <svg class="svg-icon" style="width:40px;height:40px;margin-bottom:0.75rem;color:var(--text-muted)" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
+                            <p class="text-sm" style="font-weight:500">Drop a PDF here or</p>
+                            <button class="btn btn-primary mt-2" data-action="add-upload-trigger" style="font-size:0.8125rem">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+                                Choose PDF File
+                            </button>
+                            <p class="text-xs text-muted mt-2">Requires internet for PDF parsing library</p>
+                        </div>
+                        <div class="upload-zone-selected hidden" id="upload-zone-selected">
+                            <div class="upload-file-badge">
+                                <svg class="svg-icon" style="width:20px;height:20px;flex-shrink:0" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
+                                <span class="text-sm" id="upload-file-name" style="font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</span>
+                                <button class="btn" id="upload-file-clear" style="padding:0.25rem 0.5rem;font-size:0.75rem">✕ Remove</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="upload-context-section">
+                        <div class="upload-context-header">
+                            <svg class="svg-icon" style="width:18px;height:18px" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                            <span style="font-weight:500">Additional Context <span class="text-xs text-muted">(helps AI accuracy)</span></span>
+                        </div>
+                        <div class="upload-context-grid">
+                            <div class="form-group" style="margin-bottom:0">
+                                <label class="form-label">Course / Subject</label>
+                                <input type="text" class="input" id="add-upload-course" placeholder="e.g., CS 201 — Data Structures">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0">
+                                <label class="form-label">Assignment Type</label>
+                                <select class="input" id="add-upload-type">
+                                    <option value="">Auto-detect from PDF</option>
+                                    <option>Essay</option><option>Coding</option><option>Math</option>
+                                    <option>Research</option><option>Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0">
+                                <label class="form-label">Deadline</label>
+                                <input type="date" class="input" id="add-upload-date">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0">
+                                <label class="form-label">Weightage / Points</label>
+                                <input type="text" class="input" id="add-upload-weight" placeholder="e.g., 20% of final grade">
+                            </div>
+                        </div>
+                        <div class="form-group mt-4" style="margin-bottom:0">
+                            <label class="form-label">Extra Notes for AI</label>
+                            <textarea class="textarea" id="add-upload-notes" style="min-height:80px" placeholder="Anything else the AI should know — special requirements, professor expectations, grading criteria, your current progress, etc."></textarea>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary mt-4" id="upload-analyze-btn" data-action="analyze:upload" disabled style="width:100%;justify-content:center;padding:0.75rem">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+                        Analyze PDF & Context
+                    </button>
+                </div>
+
+                <div id="tab-content-manual" class="tab-content hidden">
+                    <div class="form-group">
+                        <label class="form-label">Title</label>
+                        <input type="text" class="input" id="add-manual-title">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description (Optional)</label>
+                        <textarea class="textarea" id="add-manual-desc"></textarea>
+                    </div>
+                    <div class="form-group flex justify-between items-center">
+                        <div style="flex:1; margin-right: 1rem;">
+                            <label class="form-label">Type</label>
+                            <select class="input" id="add-manual-type">
+                                <option>Essay</option><option>Coding</option><option>Math</option>
+                                <option>Research</option><option>Other</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <label class="form-label">Deadline</label>
+                            <input type="date" class="input" id="add-manual-date">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary mt-2" data-action="analyze:manual">Process Manually/Analyze</button>
+                </div>
+            </div>
+
+            <div id="add-preview-state" class="hidden">
+                <div class="card" style="border-color: var(--primary);">
+                    <div class="text-sm text-muted mb-2">Preview & Edit</div>
+                    <div class="form-group">
+                        <label class="form-label">Title</label>
+                        <input type="text" class="input" id="preview-title">
+                    </div>
+                    <div class="form-group flex justify-between gap-4">
+                        <div style="flex:1;">
+                            <label class="form-label">Type & Deadline</label>
+                            <div class="flex gap-2">
+                                <select class="input" id="preview-type" style="flex:1;">
+                                    <option>Essay</option><option>Coding</option><option>Math</option>
+                                    <option>Research</option><option>Other</option>
+                                </select>
+                                <input type="date" class="input" id="preview-date" style="flex:1;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-meta-grid" style="margin: 0.5rem 0;">
+                        <div class="detail-card text-sm">
+                            <strong>Difficulty: <span id="preview-diff-val"></span>/10</strong>
+                            <p class="text-muted mt-1" id="preview-diff-reason"></p>
+                        </div>
+                        <div class="detail-card text-sm">
+                            <strong>Est. Hours: <span id="preview-time-val"></span>h</strong>
+                            <p class="text-muted mt-1" id="preview-time-reason"></p>
+                        </div>
+                        <div class="detail-card text-sm">
+                            <strong>Priority: <span id="preview-pri-val"></span></strong>
+                            <p class="text-muted mt-1" id="preview-pri-reason"></p>
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-4">
+                        <label class="form-label">Checklist Items (Edit one per line)</label>
+                        <textarea class="textarea" id="preview-checklist" style="min-height: 150px; font-family: monospace;"></textarea>
+                    </div>
+                    
+                    <div id="preview-error-box" class="hidden text-sm" style="color: var(--danger); margin-bottom: 1rem; padding: 0.5rem; background: #fee2e2; border-radius:4px;"></div>
+
+                    <div class="flex gap-2 justify-end">
+                        <button class="btn" data-action="preview-cancel">Discard Draft</button>
+                        <button class="btn btn-primary" id="preview-save-btn" data-action="preview-save">Confirm & Save</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- VIEW: Detail -->
+        <main id="view-detail" class="view hidden">
+            <!-- Populated dynamically via JS -->
+        </main>
+
+        <!-- VIEW: Settings -->
+        <main id="view-settings" class="view hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2>Settings</h2>
+                <button class="btn" data-action="view:dashboard">Back</button>
+            </div>
+
+            <div class="card">
+                <h3>Skills & Knowledge Profile</h3>
+                <p class="text-sm text-muted mb-2">Describe your current knowledge and skill level across subjects. The AI uses this to calibrate difficulty and priority scores.</p>
+                <textarea class="textarea" id="set-skills" placeholder="E.g., I am a junior CS student adept at Python but struggling with Calculus..."></textarea>
+            </div>
+
+            <div class="card">
+                <h3>Priority Criteria</h3>
+                <div class="form-group">
+                    <label class="form-label">Preset</label>
+                    <div class="flex flex-col gap-2">
+                        <label><input type="radio" name="set-preset" value="Deadline-first"> Deadline-first</label>
+                        <label><input type="radio" name="set-preset" value="Difficulty-first"> Difficulty-first (Hardest first)</label>
+                        <label><input type="radio" name="set-preset" value="Easiest-first"> Easiest-first</label>
+                        <label><input type="radio" name="set-preset" value="Balanced" checked> Balanced</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Custom Rule (Optional)</label>
+                    <input type="text" class="input" id="set-rule" placeholder="E.g., Always prioritize Research items slightly lower.">
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>AI Provider</h3>
+                <div class="form-group">
+                    <label class="form-label">Provider</label>
+                    <select class="input" id="set-provider" onchange="onProviderChange(this.value)">
+                        <option value="ollama">Ollama (local)</option>
+                        <option value="anthropic">Anthropic (Claude)</option>
+                        <option value="openai">OpenAI (GPT)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="set-apikey-group">
+                    <label class="form-label">API Key</label>
+                    <input type="password" class="input" id="set-apiKey" placeholder="sk-...">
+                </div>
+                <div class="form-group" id="set-baseurl-group">
+                    <label class="form-label">Ollama Base URL</label>
+                    <input type="text" class="input" id="set-baseUrl" value="http://localhost:11434">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" id="set-model-label">Model Name</label>
+                    <input type="text" class="input" id="set-model" placeholder="e.g. qwen2.5:14b">
+                    <p class="text-xs text-muted mt-2" id="set-model-hint"></p>
+                </div>
+                <div class="flex gap-2 items-center">
+                    <button class="btn" data-action="test-ollama">Test Connection</button>
+                    <span id="set-test-result" class="text-sm"></span>
+                </div>
+            </div>
+
+            <button class="btn btn-primary w-full mt-4" data-action="save-settings" style="width: 100%; justify-content:center;">Save All Settings</button>
+        </main>
+    </div>
+
+    <!-- Global Spinner -->
+    <div id="global-spinner" class="overlay hidden">
+        <div class="flex flex-col items-center gap-4" style="color: white;">
+            <div class="spinner"></div>
+            <h3 id="spinner-text">Processing...</h3>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="overlay hidden">
+        <div class="modal">
+            <h3 id="confirm-title">Confirm Action</h3>
+            <p id="confirm-msg" class="text-muted mt-2 mb-4">Are you sure?</p>
+            <div class="flex gap-2 justify-end">
+                <button class="btn" id="confirm-no">Cancel</button>
+                <button class="btn btn-danger" id="confirm-yes">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js" defer> </script>
+</body>
+</html>
