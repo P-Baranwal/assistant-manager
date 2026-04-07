@@ -132,14 +132,34 @@ Use the **Test Connection** button to verify reachability before saving.
 | AI (cloud) | Anthropic or OpenAI API |
 | Theme | Light + automatic dark mode via `prefers-color-scheme` |
 
+## Architecture & Refactoring
+
+### Project Structure
+The app recently adopted a local-only ES Module architecture (no bundlers) organized under \`src/\`:
+- \`actions.js\`: Centralized action router for UI events.
+- \`model.js\`: Pure normalization for exact data shapes.
+- \`migrations.js\`: Strict schema versioning updates logic.
+- \`storage.js\`: LocalStorage adapter wrapping \`init()\` boundary.
+- \`llm/\`: Pluggable AI engine layer (Ollama, Anthropic, OpenAI).
+- \`ui/\`: Granular UI rendering files corresponding to exact views.
+
+### Storage Migrations
+Data format changes are handled transparently via a \`schemaVersion\`. Any structural changes explicitly increment the version constant. On startup (\`storage.init()\`), the app securely reads the existing objects and patches legacy keys to ensure absolute UI stability, before rendering the main dashboard.
+
+### Data Model Structure
+- \`app:schemaVersion\`: Integer governing the migration level applied to the system.
+- \`app:deviceId\`: Stable persistent string identifying the local environment.
+- \`profile\`: Central user config (skills, AI keys, custom priority logic).
+- \`assignments:index\`: Array of task IDs.
+- \`assignments:id\`: Core document containing normalized outputs like difficulty, priority score, arrays of sub-checklist IDs.
+
 ---
 
-## Data & Privacy
+## Data & Privacy (Threat Model)
 
-- All data is stored locally in your browser's `localStorage` — nothing leaves your device (when using Ollama).
-- When using Anthropic or OpenAI providers, assignment content is sent to their APIs for analysis.
-- The AI is **never** asked to complete assignments — only to extract metadata (type, difficulty, time, checklist, priority).
-- LLM calls happen only on: Add, Re-analyze, Boost, and Unboost. Never on dashboard load or checklist updates.
+- All data is stored locally in your browser's \`localStorage\`.
+- **API Keys**: When using cloud providers, keys are stored explicitly in plaintext within \`localStorage\`. Do not use this tool on a shared or un-trusted device. Avoid entering production keys with overly broad permissions; scope the keys strictly to LLM inference if possible.
+- The AI is **never** asked to complete assignments, and requests execute strictly over HTTPS or localhost boundaries.
 
 ---
 

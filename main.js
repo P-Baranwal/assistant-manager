@@ -1,5 +1,5 @@
+// LEGACY ENTRYPOINT - DO NOT DELETE UNTIL ES MODULE REFACTOR IS FULLY VALIDATED
 // @ts-nocheck
-
 // --- 1. STORAGE POLYFILL & ABSTRACTION ---
 if (!window.storage) {
     window.storage = {
@@ -58,7 +58,6 @@ const state = {
 const uuid = () => crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
 const q = (sel) => document.querySelector(sel);
 const setHtml = (id, html) => { const el = document.getElementById(id); if(el) el.innerHTML = html; };
-
 function showSpinner(text="Loading...") {
     q('#spinner-text').textContent = text;
     q('#global-spinner').classList.remove('hidden');
@@ -360,7 +359,7 @@ async function loadDashboard() {
             const score = mapScore(t) || 0;
             
             html += `
-            <div class="card" data-action="detail:${t.id}" style="animation-delay: ${i*0.05}s">
+            <div class="card" data-action="detail-open:${t.id}" style="animation-delay: ${i*0.05}s">
                 <div class="card-header">
                     <div>
                         <div class="text-xs text-muted mb-1">#${i+1} &middot; Score: ${score} ${t.boost?.active ? '<svg class="svg-icon" viewBox="0 0 24 24" style="vertical-align: text-bottom; fill: var(--primary)"><path d="M13.13 22.19L11.5 18.36C13.07 17.78 14.54 17 15.9 16.09L13.13 22.19ZM5.64 12.5L1.81 10.87L7.91 8.1C7 9.46 6.22 10.93 5.64 12.5ZM21.61 2.39C21.61 2.39 16.66 .269 9 5.36C5.79 7.5 3.39 10.71 2 14.53L5.53 16.06L7.33 18.15L8.2 21.05C8.84 21.32 9.54 21.46 10.25 21.46C11.53 21.46 12.75 21 13.75 20.25CL21.5 13C22 10.5 22 8.5 21.61 2.39Z"/></svg> (Boosted)' : ''}</div>
@@ -388,7 +387,7 @@ async function loadDashboard() {
     // Render Completed
     let doneHtml = '';
     completed.forEach(t => {
-        doneHtml += `<div class="card" data-action="detail:${t.id}" style="opacity: 0.7; scale: 0.98;">
+        doneHtml += `<div class="card" data-action="detail-open:${t.id}" style="opacity: 0.7; scale: 0.98;">
             <div class="card-header"><h3 class="card-title text-muted" style="text-decoration:line-through">${t.title}</h3></div>
         </div>`;
     });
@@ -680,7 +679,7 @@ document.body.addEventListener('click', async (e) => {
     const [action, arg] = btn.dataset.action.split(':');
     
     if(action === 'view') switchView(arg);
-    if(action === 'detail') loadDetail(arg);
+    if(action === 'detail-open') loadDetail(arg);
     
     if(action === 'toggle-completed') {
         q('#completed-assignments').classList.toggle('hidden');

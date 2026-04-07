@@ -236,7 +236,7 @@
                 <h3>AI Provider</h3>
                 <div class="form-group">
                     <label class="form-label">Provider</label>
-                    <select class="input" id="set-provider" onchange="onProviderChange(this.value)">
+                    <select class="input" id="set-provider" data-action="settings:providerChanged">
                         <option value="ollama">Ollama (local)</option>
                         <option value="anthropic">Anthropic (Claude)</option>
                         <option value="openai">OpenAI (GPT)</option>
@@ -285,6 +285,7 @@
         </div>
     </div>
 
-    <script src="main.js" defer> </script>
+    <!-- script src="main.js" defer> </script> -->
+    <script src="src/index.js" type="module"></script>
 </body>
 </html>
