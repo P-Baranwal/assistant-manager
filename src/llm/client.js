@@ -1,12 +1,16 @@
 import * as ollama from './providers/ollama.js';
 import * as anthropic from './providers/anthropic.js';
 import * as openai from './providers/openai.js';
+import * as gemini from './providers/gemini.js';
+import * as groq from './providers/groq.js';
 import { JSON_SCHEMA_PROMPT, normalizeAnalysisResult } from './contract.js';
 
 const providers = {
     ollama,
     anthropic,
-    openai
+    openai,
+    gemini,
+    groq
 };
 
 export async function fetchHealth(profile) {

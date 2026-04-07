@@ -7,7 +7,9 @@ import { registerRouter } from '../actions.js';
 const MODEL_HINTS = {
     ollama: 'e.g. qwen2.5:14b, llama3.1:8b, phi4',
     anthropic: 'e.g. claude-3-5-sonnet-20240620, claude-opus-20240229',
-    openai: 'e.g. gpt-4o, gpt-4o-mini, gpt-4-turbo'
+    openai: 'e.g. gpt-4o, gpt-4o-mini, gpt-4-turbo',
+    gemini: 'e.g. gemini-2.0-flash, gemini-1.5-flash, gemini-2.5-pro',
+    groq: 'e.g. llama-3.3-70b-versatile, llama-3.1-8b-instant, gemma2-9b-it'
 };
 
 export function updateProviderUI(provider) {
