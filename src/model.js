@@ -29,7 +29,7 @@ export function normalizeAssignment(a) {
         difficulty: Math.max(DIFFICULTY.MIN, Math.min(DIFFICULTY.MAX, parseInt(a.difficulty) || 5)),
         difficultyReasoning: a.difficultyReasoning || "",
         estimatedHours: Math.max(0, parseFloat(a.estimatedHours) || 1),
-        timeReasoning: a.timeReasoning || "",
+        estimatedHoursReasoning: a.estimatedHoursReasoning || a.timeReasoning || "",
         priorityScore: Math.max(PRIORITY.MIN, Math.min(PRIORITY.MAX, parseInt(a.priorityScore) || 50)),
         priorityReasoning: a.priorityReasoning || "",
         

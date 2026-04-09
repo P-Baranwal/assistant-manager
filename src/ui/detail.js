@@ -55,7 +55,7 @@ export async function loadDetail(id) {
                 </div>
                 <div class="detail-card">
                     <strong>Est. Hours: ${t.estimatedHours}</strong>
-                    <p class="text-sm text-muted mt-1">${t.timeReasoning}</p>
+                    <p class="text-sm text-muted mt-1">${t.estimatedHoursReasoning}</p>
                 </div>
                 <div class="detail-card" style="${isBoosted?'border-color:var(--primary)':''}">
                     <strong>Priority: ${isBoosted ? t.boost.boostedPriorityScore : t.priorityScore}</strong>
@@ -193,7 +193,7 @@ export function registerRoutes() {
             t.priorityScore = rec.priorityScore;
             t.priorityReasoning = rec.priorityReasoning;
             t.estimatedHours = rec.estimatedHours;
-            t.timeReasoning = rec.timeReasoning;
+            t.estimatedHoursReasoning = rec.estimatedHoursReasoning;
             t.analyzedAt = new Date().toISOString();
             
             t.checklist = rec.checklist.map(recItem => {

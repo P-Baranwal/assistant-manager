@@ -139,7 +139,7 @@ async function processAddAction(source) {
                 type: 'Other',
                 deadline: manualForm.date || null,
                 difficulty: 5, difficultyReasoning: "Fallback based on failure",
-                estimatedHours: 1, timeReasoning: "Fallback",
+                estimatedHours: 1, estimatedHoursReasoning: "Fallback",
                 priorityScore: 50, priorityReasoning: "Fallback",
                 checklist: []
             };
@@ -149,7 +149,7 @@ async function processAddAction(source) {
         resultContext = {
             title: manualForm.title, type: manualForm.type, deadline: manualForm.date||null,
             difficulty: 5, difficultyReasoning: "Manual entry default",
-            estimatedHours: 1, timeReasoning: "Manual entry default",
+            estimatedHours: 1, estimatedHoursReasoning: "Manual entry default",
             priorityScore: 50, priorityReasoning: "Manual entry default",
             checklist: []
         };
@@ -178,7 +178,7 @@ function renderPreview() {
     q('#preview-diff-val').textContent = d.difficulty || '?';
     q('#preview-diff-reason').textContent = d.difficultyReasoning || '';
     q('#preview-time-val').textContent = d.estimatedHours || '?';
-    q('#preview-time-reason').textContent = d.timeReasoning || '';
+    q('#preview-time-reason').textContent = d.estimatedHoursReasoning || '';
     q('#preview-pri-val').textContent = d.priorityScore || '?';
     q('#preview-pri-reason').textContent = d.priorityReasoning || '';
     

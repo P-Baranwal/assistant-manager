@@ -143,8 +143,8 @@ Output strictly in this JSON schema. Return NO markdown formatting, NO fences, N
 "deadline": "YYYY-MM-DD or null",
 "difficulty": integer (1-10),
 "difficultyReasoning": "one short sentence",
+"estimatedHoursReasoning": "subtask decomposition + skill adjustment, e.g. '3 subtasks × ~1hr each, user is comfortable with Python so -20%'",
 "estimatedHours": number,
-"timeReasoning": "one short sentence",
 "priorityScore": integer (0-100),
 "priorityReasoning": "one short sentence",
 "checklist": ["string", "string"]
@@ -480,7 +480,7 @@ async function processAddAction(source) {
                 type: manualForm.type || "Other",
                 deadline: manualForm.date || null,
                 difficulty: 5, difficultyReasoning: "Fallback",
-                estimatedHours: 1, timeReasoning: "Fallback",
+                estimatedHours: 1, estimatedHoursReasoning: "Fallback",
                 priorityScore: 50, priorityReasoning: "Fallback",
                 checklist: []
             };
@@ -490,7 +490,7 @@ async function processAddAction(source) {
             resultContext = {
             title: manualForm.title, type: manualForm.type, deadline: manualForm.date||null,
             difficulty: 5, difficultyReasoning: "Manual entry default",
-            estimatedHours: 1, timeReasoning: "Manual entry default",
+            estimatedHours: 1, estimatedHoursReasoning: "Manual entry default",
             priorityScore: 50, priorityReasoning: "Manual entry default",
             checklist: []
         };
@@ -517,7 +517,7 @@ function renderPreview() {
     q('#preview-diff-val').textContent = d.difficulty || '?';
     q('#preview-diff-reason').textContent = d.difficultyReasoning || '';
     q('#preview-time-val').textContent = d.estimatedHours || '?';
-    q('#preview-time-reason').textContent = d.timeReasoning || '';
+    q('#preview-time-reason').textContent = d.estimatedHoursReasoning || '';
     q('#preview-pri-val').textContent = d.priorityScore || '?';
     q('#preview-pri-reason').textContent = d.priorityReasoning || '';
     
@@ -593,7 +593,7 @@ async function loadDetail(id) {
                     </div>
                     <div class="detail-card">
                         <strong>Est. Hours: ${t.estimatedHours}</strong>
-                        <p class="text-sm text-muted mt-1">${t.timeReasoning}</p>
+                        <p class="text-sm text-muted mt-1">${t.estimatedHoursReasoning}</p>
                     </div>
                     <div class="detail-card" style="${isBoosted?'border-color:var(--primary)':''}">
                         <strong>Priority: ${isBoosted ? t.boost.boostedPriorityScore : t.priorityScore} ${isBoosted?'<svg class="svg-icon" viewBox="0 0 24 24" style="vertical-align: text-bottom; fill: var(--primary)"><path d="M13.13 22.19L11.5 18.36C13.07 17.78 14.54 17 15.9 16.09L13.13 22.19ZM5.64 12.5L1.81 10.87L7.91 8.1C7 9.46 6.22 10.93 5.64 12.5ZM21.61 2.39C21.61 2.39 16.66 .269 9 5.36C5.79 7.5 3.39 10.71 2 14.53L5.53 16.06L7.33 18.15L8.2 21.05C8.84 21.32 9.54 21.46 10.25 21.46C11.53 21.46 12.75 21 13.75 20.25CL21.5 13C22 10.5 22 8.5 21.61 2.39Z"/></svg>':''}</strong>
@@ -755,7 +755,7 @@ document.body.addEventListener('click', async (e) => {
                 t.priorityScore = rec.priorityScore;
                 t.priorityReasoning = rec.priorityReasoning;
                 t.estimatedHours = rec.estimatedHours;
-                t.timeReasoning = rec.timeReasoning;
+                t.estimatedHoursReasoning = rec.estimatedHoursReasoning;
                 t.analyzedAt = new Date().toISOString();
                 
                 t.checklist = rec.checklist.map(recItem => {

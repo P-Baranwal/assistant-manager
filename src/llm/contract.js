@@ -8,8 +8,8 @@ Output strictly in this JSON schema. Return NO markdown formatting, NO fences, N
 "deadline": "YYYY-MM-DD or null",
 "difficulty": integer (1-10),
 "difficultyReasoning": "one short sentence",
+"estimatedHoursReasoning": "subtask decomposition + skill adjustment, e.g. '3 subtasks × ~1hr each, user is comfortable with Python so -20%'",
 "estimatedHours": number,
-"timeReasoning": "one short sentence",
 "priorityScore": integer (0-100),
 "priorityReasoning": "one short sentence",
 "checklist": ["string", "string"]
@@ -38,6 +38,7 @@ export function normalizeAnalysisResult(jStr) {
         
         parsed.difficulty = Math.max(DIFFICULTY.MIN, Math.min(DIFFICULTY.MAX, parseInt(parsed.difficulty) || Math.round(DIFFICULTY.MAX/2)));
         parsed.priorityScore = Math.max(PRIORITY.MIN, Math.min(PRIORITY.MAX, parseInt(parsed.priorityScore) || Math.round(PRIORITY.MAX/2)));
+        if(!parsed.estimatedHoursReasoning) parsed.estimatedHoursReasoning = "";
         parsed.estimatedHours = Math.max(0, parseFloat(parsed.estimatedHours) || 1);
         
         return parsed;

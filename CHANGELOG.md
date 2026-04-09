@@ -10,3 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Schema versioning support and migration pipeline.
 - Provider plugin interface (`validate` and `healthCheck`).
 - Strict action routing replacing monolithic global handlers.
+- More llm providers(groq and gemini)
+- added estimatedHoursReasoning parameter
+
+### Changed
+llm prompting, now more detailed
