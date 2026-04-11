@@ -11,6 +11,7 @@
     import Add from './views/Add.svelte';
     import Detail from './views/Detail.svelte';
     import Settings from './views/Settings.svelte';
+    import TaskManager from './views/TaskManager.svelte';
 
     let isInitializing = true;
     let globalSpinner = { show: false, text: 'Processing...' };
@@ -24,11 +25,16 @@
         const p = await storage.getProfile();
         profile.set(p);
 
-        // 3. Load Assignments (Phase 1, tasks later)
+        // 3. Load Assignments & Tasks
         const index = await storage.getIndex();
         const itemPromises = index.map(id => storage.getAssignment(id));
         const allAssignments = (await Promise.all(itemPromises)).filter(Boolean);
         assignments.set(allAssignments);
+
+        const tIndex = await storage.getTaskIndex();
+        const tPromises = tIndex.map(id => storage.getTask(id));
+        const allTasks = (await Promise.all(tPromises)).filter(Boolean);
+        tasks.set(allTasks);
 
         isInitializing = false;
 
@@ -70,6 +76,8 @@
             <Detail />
         {:else if $view === 'settings'}
             <Settings />
+        {:else if $view === 'task-manager'}
+            <TaskManager />
         {/if}
     </main>
 {/if}

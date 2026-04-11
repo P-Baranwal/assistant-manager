@@ -72,5 +72,25 @@ export const storage = {
         let idx = await this.getIndex();
         idx = idx.filter(x => x !== id);
         await adapter.set(STORAGE_KEYS.INDEX_ASSIGNMENTS, idx);
+    },
+    
+    async getTask(id) {
+        const t = await adapter.get(`tasks:${id}`);
+        return t ? normalizeTask(t) : null;
+    },
+    async saveTask(task) {
+        const normTask = normalizeTask(task);
+        await adapter.set(`tasks:${normTask.id}`, normTask);
+        let idx = await this.getTaskIndex();
+        if (!idx.includes(normTask.id)) {
+            idx.push(normTask.id);
+            await adapter.set(STORAGE_KEYS.INDEX_TASKS, idx);
+        }
+    },
+    async deleteTask(id) {
+        await adapter.delete(`tasks:${id}`);
+        let idx = await this.getTaskIndex();
+        idx = idx.filter(x => x !== id);
+        await adapter.set(STORAGE_KEYS.INDEX_TASKS, idx);
     }
 };

@@ -1,5 +1,5 @@
 <script>
-    import { view, activeDetailId, profile, assignments } from '$lib/stores';
+    import { view, activeDetailId, profile, assignments, tasks } from '$lib/stores';
     import { storage } from '$lib/storage';
     import { analyzeAssignment } from '$lib/llm/client';
     import { uuid } from '$lib/utils/id';
@@ -28,22 +28,43 @@
     const getDiffColor = (d) => d <= 3 ? 'var(--diff-low)' : d <= 6 ? 'var(--diff-med)' : 'var(--diff-high)';
 
     $: if ($activeDetailId) {
-        loadDetail($activeDetailId);
+        loadDetail($activeDetailId.id, $activeDetailId.type);
     }
     
-    async function loadDetail(id) {
+    async function loadDetail(id, type) {
         loading = true;
-        const res = await storage.getAssignment(id);
+        let res;
+        if (type === 'task') {
+            res = await storage.getTask(id);
+        } else {
+            res = await storage.getAssignment(id);
+        }
         if (res) detail = res;
         loading = false;
     }
 
     async function commitUpdate() {
         if (!detail) return;
-        await storage.saveAssignment(detail);
+        if (detail.entityType === 'task') {
+            await storage.saveTask(detail);
+            await refreshTasks();
+        } else {
+            await storage.saveAssignment(detail);
+            await refreshAssignments();
+        }
+    }
+
+    async function refreshAssignments() {
         const allIds = await storage.getIndex();
         const all = (await Promise.all(allIds.map(id => storage.getAssignment(id)))).filter(Boolean);
         assignments.set(all);
+    }
+
+    async function refreshTasks() {
+        const tIndex = await storage.getTaskIndex();
+        const tPromises = tIndex.map(id => storage.getTask(id));
+        const allTasks = (await Promise.all(tPromises)).filter(Boolean);
+        tasks.set(allTasks);
     }
 
     async function handleCheckToggle() {
@@ -68,17 +89,19 @@
         };
     }
 
-    function deleteAssignment() {
+    function deleteItem() {
         confirmConfig = {
             show: true,
-            title: "Delete Assignment",
+            title: "Delete " + (detail.entityType === 'task' ? 'Task' : 'Assignment'),
             message: "This cannot be undone.",
             onConfirm: async () => {
-                await storage.deleteAssignment(detail.id);
-                // Refresh list
-                const allIds = await storage.getIndex();
-                const all = (await Promise.all(allIds.map(id => storage.getAssignment(id)))).filter(Boolean);
-                assignments.set(all);
+                if (detail.entityType === 'task') {
+                    await storage.deleteTask(detail.id);
+                    await refreshTasks();
+                } else {
+                    await storage.deleteAssignment(detail.id);
+                    await refreshAssignments();
+                }
                 view.set('dashboard');
                 confirmConfig.show = false;
             }
@@ -92,7 +115,11 @@
         processing = true;
         errorMsg = '';
         try {
-            const rec = await analyzeAssignment(detail.rawContent, $profile, boostReasonInput, detail);
+            const rawContent = detail.entityType === 'task' 
+                ? `Title: ${detail.title}\nDescription: ${detail.description}`
+                : detail.rawContent;
+
+            const rec = await analyzeAssignment(rawContent, $profile, boostReasonInput, detail);
             detail.boost = { active: true, reason: boostReasonInput, boostedPriorityScore: rec.priorityScore };
             detail.priorityReasoning = rec.priorityReasoning;
             await commitUpdate();
@@ -110,7 +137,10 @@
         spinnerText = "Recalculating baseline...";
         processing = true;
         try {
-            const rec = await analyzeAssignment(detail.rawContent, $profile);
+            const rawContent = detail.entityType === 'task' 
+                ? `Title: ${detail.title}\nDescription: ${detail.description}`
+                : detail.rawContent;
+            const rec = await analyzeAssignment(rawContent, $profile);
             detail.priorityScore = rec.priorityScore;
             detail.priorityReasoning = rec.priorityReasoning;
             await commitUpdate();
@@ -154,14 +184,18 @@
                 {#if detail.status !== 'done'}
                     <button class="btn btn-primary" on:click={markDone}>Mark Done</button>
                 {/if}
-                <button class="btn btn-danger" on:click={deleteAssignment}>Delete</button>
+                <button class="btn btn-danger" on:click={deleteItem}>Delete</button>
             </div>
         </div>
         
         <div class="card">
             <div class="flex justify-between items-start">
                 <h2 style="margin:0">{detail.title}</h2>
-                <span class="tag" style="background:{typeColors[detail.type]?.bg||''}; color:{typeColors[detail.type]?.text||''}">{detail.type}</span>
+                {#if detail.entityType === 'assignment'}
+                    <span class="tag" style="background:{typeColors[detail.type]?.bg||''}; color:{typeColors[detail.type]?.text||''}">{detail.type}</span>
+                {:else}
+                    <span class="tag tag-gray">Task</span>
+                {/if}
             </div>
             <div class="flex items-center gap-2 mt-2">
                 <label class="text-sm" for="detail-date">Deadline:</label>
@@ -169,39 +203,50 @@
             </div>
             
             <div class="detail-meta-grid">
-                <div class="detail-card">
-                    <strong>Difficulty: <span style="color:{getDiffColor(detail.difficulty)}">{detail.difficulty}</span>/10</strong>
-                    <p class="text-sm text-muted mt-1">{detail.difficultyReasoning}</p>
-                </div>
-                <div class="detail-card">
-                    <strong>Est. Hours: {detail.estimatedHours}</strong>
-                    <p class="text-sm text-muted mt-1">{detail.estimatedHoursReasoning}</p>
-                </div>
+                {#if detail.entityType === 'assignment'}
+                    <div class="detail-card">
+                        <strong>Difficulty: <span style="color:{getDiffColor(detail.difficulty)}">{detail.difficulty}</span>/10</strong>
+                        <p class="text-sm text-muted mt-1">{detail.difficultyReasoning}</p>
+                    </div>
+                    <div class="detail-card">
+                        <strong>Est. Hours: {detail.estimatedHours}</strong>
+                        <p class="text-sm text-muted mt-1">{detail.estimatedHoursReasoning}</p>
+                    </div>
+                {/if}
                 <div class="detail-card" style="{isBoosted ? 'border-color:var(--primary)' : ''}">
                     <strong>Priority: {isBoosted ? detail.boost.boostedPriorityScore : detail.priorityScore}</strong>
                     <p class="text-sm text-muted mt-1">{isBoosted ? detail.boost.reason : detail.priorityReasoning}</p>
                 </div>
             </div>
 
-            <hr style="border:0; border-top:1px solid var(--border-color); margin: 1.5rem 0;">
-            
-            <div class="flex justify-between items-center mb-4">
-                <h3 style="font-size:1.125rem">Checklist</h3>
-                <div class="text-sm text-muted">{detail.checklist.filter(x => x.done).length}/{detail.checklist.length}</div>
-            </div>
+            {#if detail.entityType === 'task' && detail.description}
+                <div class="mb-4">
+                    <h3 style="font-size:1rem; margin-bottom:0.5rem">Description</h3>
+                    <p class="text-sm" style="white-space: pre-wrap;">{detail.description}</p>
+                </div>
+            {/if}
 
-            <div>
-                {#if detail.checklist.length > 0}
-                    {#each detail.checklist as item (item.id)}
-                        <label class="checklist-item">
-                            <input type="checkbox" bind:checked={item.done} on:change={handleCheckToggle}>
-                            <span class="checklist-text">{item.text}</span>
-                        </label>
-                    {/each}
-                {:else}
-                    <p class="text-sm text-muted">No checklist items.</p>
-                {/if}
-            </div>
+            {#if detail.entityType === 'assignment'}
+                <hr style="border:0; border-top:1px solid var(--border-color); margin: 1.5rem 0;">
+                
+                <div class="flex justify-between items-center mb-4">
+                    <h3 style="font-size:1.125rem">Checklist</h3>
+                    <div class="text-sm text-muted">{detail.checklist.filter(x => x.done).length}/{detail.checklist.length}</div>
+                </div>
+
+                <div>
+                    {#if detail.checklist.length > 0}
+                        {#each detail.checklist as item (item.id)}
+                            <label class="checklist-item">
+                                <input type="checkbox" bind:checked={item.done} on:change={handleCheckToggle}>
+                                <span class="checklist-text">{item.text}</span>
+                            </label>
+                        {/each}
+                    {:else}
+                        <p class="text-sm text-muted">No checklist items.</p>
+                    {/if}
+                </div>
+            {/if}
             
             <hr style="border:0; border-top:1px solid var(--border-color); margin: 1.5rem 0;">
             
@@ -220,7 +265,7 @@
                 </div>
             {/if}
 
-            {#if detail.status !== 'done'}
+            {#if detail.status !== 'done' && detail.entityType === 'assignment'}
                 <div class="mt-4 flex justify-end">
                     <button class="btn" on:click={reAnalyze}>Re-Analyze (AI)</button>
                 </div>
