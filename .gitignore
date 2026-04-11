@@ -24,4 +24,6 @@ dist-ssr
 *.sw?
 
 #markdown files
+bugs.md
+new_features.md
 
