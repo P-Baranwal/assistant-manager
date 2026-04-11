@@ -1,4 +1,4 @@
-import { TYPES, DIFFICULTY, PRIORITY } from '../constants.js';
+import { TYPES, DIFFICULTY, PRIORITY } from '../../constants.js';
 
 export const JSON_SCHEMA_PROMPT = `
 Output strictly in this JSON schema. Return NO markdown formatting, NO fences, NO preamble, just the raw JSON object.
