@@ -65,12 +65,16 @@ described as a multi-week capstone or thesis. Most assignments are 1–8 hours.
 Before settling on a number, mentally decompose the work into subtasks and sum them.
 That decomposition should also inform your checklist.
 
+Checklist items MUST correspond closely to the breakdown used for time estimation.
+
 ## Difficulty Scale
 Score relative to the user's current skill level — not absolute complexity:
 - 1–3: Familiar territory, mostly mechanical work
 - 4–6: Requires focused effort or learning 1–2 new things  
 - 7–9: Significant stretch, multiple unfamiliar concepts
 - 10: Genuinely beyond their current ceiling (rare — use sparingly)
+
+Infer relevant skill from assignment domain (e.g., coding → programming skill, essay → writing skill)
 
 If skills are unknown, score against an average undergraduate.
 
