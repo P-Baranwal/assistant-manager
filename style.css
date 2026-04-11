@@ -34,7 +34,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
         --bg-color: #111827;
         --surface-color: #1f2937;
         --text-main: #f9fafb;
@@ -48,6 +48,21 @@
         --bg-research: #134e4a; --text-research: #ccfbf1;
         --bg-other: #374151; --text-other: #e5e7eb;
     }
+}
+
+[data-theme='dark'] {
+    --bg-color: #111827;
+    --surface-color: #1f2937;
+    --text-main: #f9fafb;
+    --text-muted: #9ca3af;
+    --text-light: #6b7280;
+    --border-color: #374151;
+    
+    --bg-essay: #4c1d95; --text-essay: #e9d5ff;
+    --bg-coding: #075985; --text-coding: #bae6fd;
+    --bg-math: #78350f; --text-math: #fef3c7;
+    --bg-research: #134e4a; --text-research: #ccfbf1;
+    --bg-other: #374151; --text-other: #e5e7eb;
 }
 
 /* Reset & Base */

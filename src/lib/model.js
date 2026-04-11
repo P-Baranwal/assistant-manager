@@ -1,4 +1,4 @@
-import { TYPES, STATUS, PRESETS, PROVIDER_NAMES, DIFFICULTY, PRIORITY } from './constants.js';
+import { TYPES, STATUS, PRESETS, PROVIDER_NAMES, DIFFICULTY, PRIORITY, ENTITY_TYPES } from './constants.js';
 
 export function normalizeProfile(p) {
     if (!p) p = {};
@@ -17,6 +17,7 @@ export function normalizeAssignment(a) {
     if (!a) a = {};
     return {
         id: a.id || null, // Will be enforced by storage if missing, but should be present.
+        entityType: 'assignment',
         title: a.title || "Untitled",
         type: TYPES.includes(a.type) ? a.type : "Other",
         deadline: a.deadline || null, // YYYY-MM-DD
@@ -56,5 +57,22 @@ function normalizeChecklistItem(c) {
         id: c.id,
         text: typeof c === 'string' ? c : (c.text || ""),
         done: !!c.done
+    };
+}
+
+export function normalizeTask(t) {
+    if (!t) t = {};
+    return {
+        id: t.id || null,
+        entityType: 'task',
+        title: t.title || "Untitled",
+        description: t.description || "",
+        status: STATUS.includes(t.status) ? t.status : "active",
+        priorityScore: Math.max(PRIORITY.MIN, Math.min(PRIORITY.MAX, parseInt(t.priorityScore) || 50)),
+        priorityReasoning: t.priorityReasoning || "",
+        boost: normalizeBoost(t.boost),
+        deadline: t.deadline || null,
+        createdAt: t.createdAt || new Date().toISOString(),
+        updatedAt: t.updatedAt || new Date().toISOString()
     };
 }

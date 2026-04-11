@@ -1,6 +1,6 @@
 import { STORAGE_KEYS } from './constants.js';
 import { runMigrations } from './migrations.js';
-import { normalizeProfile, normalizeAssignment } from './model.js';
+import { normalizeProfile, normalizeAssignment, normalizeTask } from './model.js';
 import { uuid } from './utils/id.js';
 
 // Internal fallback polyfill for localStorage
@@ -50,6 +50,9 @@ export const storage = {
     
     async getIndex() { 
         return (await adapter.get(STORAGE_KEYS.INDEX_ASSIGNMENTS)) || []; 
+    },
+    async getTaskIndex() {
+        return (await adapter.get(STORAGE_KEYS.INDEX_TASKS)) || [];
     },
     async getAssignment(id) { 
         const a = await adapter.get(`assignments:${id}`); 

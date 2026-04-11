@@ -2,12 +2,15 @@
     import { onMount } from 'svelte';
     import { storage } from '$lib/storage';
     import { fetchHealth } from '$lib/llm/client';
-    import { view, profile, providerReachable, assignments, tasks } from '$lib/stores';
+    import { view, profile, providerReachable, assignments, tasks, theme } from '$lib/stores';
 
     import Header from './components/Header.svelte';
     import Spinner from './components/Spinner.svelte';
     import ConfirmModal from './components/ConfirmModal.svelte';
     import Dashboard from './views/Dashboard.svelte';
+    import Add from './views/Add.svelte';
+    import Detail from './views/Detail.svelte';
+    import Settings from './views/Settings.svelte';
 
     let isInitializing = true;
     let globalSpinner = { show: false, text: 'Processing...' };
@@ -36,10 +39,19 @@
         } catch(err) {
             console.warn('Initial health check failed:', err);
         }
+        
+        // 5. Initial Theme sync
+        const currentTheme = localStorage.getItem('theme') || 'system';
+        const isDark = currentTheme === 'dark' || (currentTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
     });
 
-    // Provide these globally until we use a proper store or context for modals
-    // For Phase 1 we pass them down if needed, but App.svelte manages them.
+    $: {
+        if (!isInitializing && typeof window !== 'undefined') {
+            const isDark = $theme === 'dark' || ($theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        }
+    }
 </script>
 
 {#if isInitializing}
@@ -53,11 +65,11 @@
         {#if $view === 'dashboard'}
             <Dashboard />
         {:else if $view === 'add'}
-            <div class="text-muted p-8">Add View (Phase 2) is not yet implemented.</div>
+            <Add />
         {:else if $view === 'detail'}
-            <div class="text-muted p-8">Detail View (Phase 3) is not yet implemented.</div>
+            <Detail />
         {:else if $view === 'settings'}
-            <div class="text-muted p-8">Settings View (Phase 3) is not yet implemented.</div>
+            <Settings />
         {/if}
     </main>
 {/if}

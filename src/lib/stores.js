@@ -6,6 +6,9 @@ export const providerReachable = writable(false);  // AI status dot
 export const activeDetailId = writable(null);      // detail view target
 export const activeDraft = writable(null);         // add view draft
 
+// Theme defaults to localstorage or 'system'
+export const theme = writable(localStorage.getItem('theme') || 'system');
+
 // We hold all loaded assignments and tasks in memory for reactivity
 export const assignments = writable([]);
 export const tasks = writable([]);
