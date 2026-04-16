@@ -12,6 +12,7 @@
     import Detail from './views/Detail.svelte';
     import Settings from './views/Settings.svelte';
     import TaskManager from './views/TaskManager.svelte';
+    import Calendar from './views/Calendar.svelte';
 
     let isInitializing = true;
     let globalSpinner = { show: false, text: 'Processing...' };
@@ -78,6 +79,8 @@
             <Settings />
         {:else if $view === 'task-manager'}
             <TaskManager />
+        {:else if $view === 'calendar'}
+            <Calendar />
         {/if}
     </main>
 {/if}

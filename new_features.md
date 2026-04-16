@@ -6,3 +6,6 @@
 - combine the priority list for assignments and tasks
 - add a light theme
 - add a separate tab for completed assignments
+- add a button to reanalyse and adjust priority list according to preferences
+- add different view styles(column / rows / etc.)
+- design UI/UX
