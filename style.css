@@ -81,7 +81,7 @@ a { color: var(--primary); text-decoration: none; cursor: pointer; }
 button, input, textarea, select { font-family: inherit; border: none; outline: none; }
 
 /* Layout */
-#app { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+#app { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
 .hidden { display: none !important; }
 .flex { display: flex; }
 .flex-col { display: flex; flex-direction: column; }
