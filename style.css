@@ -6,29 +6,34 @@
     --text-muted: #6b7280;
     --text-light: #9ca3af;
     --border-color: #e5e7eb;
+
     --primary: #4f46e5;
     --primary-hover: #4338ca;
+    --primary-surface: #ede9fe;   
+    --text-on-primary: #ffffff;   
+
     --danger: #ef4444;
     --danger-hover: #dc2626;
     --success: #10b981;
-    
+    --success-hover: #059669;     
+
     /* Type Tags */
-    --bg-essay: #f3e8ff; --text-essay: #6b21a8;
-    --bg-coding: #e0f2fe; --text-coding: #0369a1;
-    --bg-math: #fef3c7; --text-math: #b45309;
+    --bg-essay: #f3e8ff;    --text-essay: #6b21a8;
+    --bg-coding: #e0f2fe;   --text-coding: #0369a1;
+    --bg-math: #fef3c7;     --text-math: #b45309;
     --bg-research: #ccfbf1; --text-research: #0f766e;
-    --bg-other: #f3f4f6; --text-other: #374151;
-    
-    /* Difficulty Tags */
-    --diff-low: var(--success);
+    --bg-other: #f3f4f6;    --text-other: #374151;
+
+    /* Difficulty — orange instead of red so high ≠ error */
+    --diff-low: #10b981;
     --diff-med: #f59e0b;
-    --diff-high: var(--danger);
+    --diff-high: #f97316;   
 
     --radius: 8px;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    
+
     --font-display: 'Outfit', sans-serif;
     --font-body: 'DM Sans', sans-serif;
 }
@@ -41,28 +46,54 @@
         --text-muted: #9ca3af;
         --text-light: #6b7280;
         --border-color: #374151;
-        
-        --bg-essay: #4c1d95; --text-essay: #e9d5ff;
-        --bg-coding: #075985; --text-coding: #bae6fd;
-        --bg-math: #78350f; --text-math: #fef3c7;
+
+        --primary: #818cf8;         
+        --primary-hover: #6366f1;   
+        --primary-surface: #312e81; 
+
+        --danger: #f87171;          
+        --danger-hover: #ef4444;    
+        --success: #34d399;         
+        --success-hover: #10b981;   
+
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);         
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4),
+                     0 2px 4px -1px rgba(0, 0, 0, 0.3);        
+
+        --bg-essay: #4c1d95;    --text-essay: #e9d5ff;
+        --bg-coding: #075985;   --text-coding: #bae6fd;
+        --bg-math: #78350f;     --text-math: #fef3c7;
         --bg-research: #134e4a; --text-research: #ccfbf1;
-        --bg-other: #374151; --text-other: #e5e7eb;
+        --bg-other: #374151;    --text-other: #e5e7eb;
     }
 }
 
 [data-theme='dark'] {
     --bg-color: #111827;
-    --surface-color: #1f2937;
-    --text-main: #f9fafb;
-    --text-muted: #9ca3af;
-    --text-light: #6b7280;
-    --border-color: #374151;
-    
-    --bg-essay: #4c1d95; --text-essay: #e9d5ff;
-    --bg-coding: #075985; --text-coding: #bae6fd;
-    --bg-math: #78350f; --text-math: #fef3c7;
-    --bg-research: #134e4a; --text-research: #ccfbf1;
-    --bg-other: #374151; --text-other: #e5e7eb;
+        --surface-color: #1f2937;
+        --text-main: #f9fafb;
+        --text-muted: #9ca3af;
+        --text-light: #6b7280;
+        --border-color: #374151;
+
+        --primary: #818cf8;         
+        --primary-hover: #6366f1;  
+        --primary-surface: #312e81; 
+
+        --danger: #f87171;          
+        --danger-hover: #ef4444;   
+        --success: #34d399;         
+        --success-hover: #10b981;  
+
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);         
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4),
+                     0 2px 4px -1px rgba(0, 0, 0, 0.3);       
+
+        --bg-essay: #4c1d95;    --text-essay: #e9d5ff;
+        --bg-coding: #075985;   --text-coding: #bae6fd;
+        --bg-math: #78350f;     --text-math: #fef3c7;
+        --bg-research: #134e4a; --text-research: #ccfbf1;
+        --bg-other: #374151;    --text-other: #e5e7eb;
 }
 
 /* Reset & Base */
@@ -81,7 +112,7 @@ a { color: var(--primary); text-decoration: none; cursor: pointer; }
 button, input, textarea, select { font-family: inherit; border: none; outline: none; }
 
 /* Layout */
-#app { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
+#app { max-width: 1000px; margin: 0 auto; padding: 2rem 1rem; }
 .hidden { display: none !important; }
 .flex { display: flex; }
 .flex-col { display: flex; flex-direction: column; }

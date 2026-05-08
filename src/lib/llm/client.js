@@ -18,7 +18,7 @@ export async function fetchHealth(profile) {
     const plugin = providers[providerName];
     if (!plugin) throw new Error(`Unknown provider: ${providerName}`);
     return await plugin.healthCheck(profile);
-}
+}x
 
 export async function analyzeAssignment(rawContent, profile, boostReason=null, existingContext=null) {
     const providerName = profile.provider || 'ollama';
