@@ -1,15 +1,15 @@
-# Assignment Manager
+# Assistant Manager (formerly Assignment Manager)
 
-A personal, offline-capable assignment management tool that uses a local or cloud LLM to **analyze, score, and prioritize** your assignments — without ever completing them for you.
+A personal, offline-capable assignment and task management tool that uses a local or cloud LLM to **analyze, score, and prioritize** your work — without ever completing it for you.
 
-No build step. No npm. No backend. Just open `online_version.html` in a browser.
+Originally an assignment manager for students, the project is evolving into a dual-tier application supporting both Student and Professional workflows. Built with Svelte and Vite, it operates entirely in your browser and keeps your data local.
 
 ---
 
 ## Features
 
 ### 📋 Dashboard
-- Assignments ranked by AI-computed **priority score** (highest priority first)
+- Assignments/Tasks ranked by AI-computed **priority score** (highest priority first)
 - Stat bar showing: **Total**, **Due This Week**, **Overdue**, and **Completed** counts
 - Per-card summary: title, type tag, urgency label, difficulty score, estimated hours, checklist progress bar
 - Collapsible **Completed Assignments** section
@@ -63,6 +63,23 @@ Regenerates difficulty, time estimate, checklist, and priority score using fresh
 
 ---
 
+## Future Features (Roadmap)
+
+We are currently transitioning the app into a **Dual-Tier Architecture** that supports both Student workflows (Assignments) and Professional workflows (Projects & Tasks). 
+
+### Professional Mode
+A local "Mode Toggle" in Settings will allow switching between the two interfaces:
+
+- **Project-Based Organization:** Work will be organized into `Projects`, with `Tasks` belonging to projects. This data model shift supports professional workflows better than standalone assignments.
+- **Pro Dashboard:** A new dashboard (`ProDashboard.svelte`) tailored for professionals. It will group tasks by Project and highlight Blocked tasks and high-ROI (High Impact / Low Effort) tasks.
+- **AI Work Breakdown Structure (WBS) Generation:** A new Pro Add view (`ProAdd.svelte`) where pasting a "Client Brief" or feature request triggers the AI to generate a complete WBS (Epics -> Sub-tasks), complete with individual time estimates and impact scores.
+- **Advanced Tracking:**
+  - **Actual Time Tracking:** Inputs to track actual time spent vs. estimated time.
+  - **Blocker Tracking:** Mark tasks as blocked by other tasks. The AI and UI will dynamically down-prioritize blocked tasks until the blocker is resolved.
+  - **ROI Calculation:** The priority algorithm for professionals will heavily weigh the `impactScore` (1-10) against `estimatedHours` to surface high-ROI work automatically.
+
+---
+
 ## Settings
 
 ### Skills & Knowledge Profile
@@ -98,22 +115,36 @@ Use the **Test Connection** button to verify reachability before saving.
 
 ## Getting Started
 
-### With Ollama (recommended — fully offline)
+### Prerequisites
+- Node.js and npm installed
 
+### Running Locally
+
+1. Clone the repository and navigate into it.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the Vite development server:
+   ```bash
+   npm run dev
+   ```
+4. Open the provided localhost URL in your browser.
+
+### AI Configuration
+
+**With Ollama (recommended — fully offline)**
 1. Install [Ollama](https://ollama.com) and pull a model:
    ```bash
    ollama pull qwen2.5:14b
    ```
-2. Open `online_version.html` in your browser.
-3. Go to **Settings** → confirm the base URL and model name → **Save**.
-4. The status dot in the header turns green when Ollama is reachable.
+2. In the app, go to **Settings** → confirm the base URL and model name → **Save**.
+3. The status dot in the header turns green when Ollama is reachable.
 
-### With Anthropic or OpenAI
-
-1. Open `online_version.html` in your browser.
-2. Go to **Settings** → AI Provider → select your provider.
-3. Paste your API key and enter the model name.
-4. Save and start adding assignments.
+**With Anthropic or OpenAI**
+1. Go to **Settings** → AI Provider → select your provider.
+2. Paste your API key and enter the model name.
+3. Save and start adding tasks.
 
 > **Note:** The PDF upload tab requires an internet connection to load the pdf.js parsing script on first use.
 
@@ -123,8 +154,9 @@ Use the **Test Connection** button to verify reachability before saving.
 
 | Concern | Technology |
 |---|---|
-| UI | Plain HTML + Vanilla CSS (no frameworks) |
-| Logic | Vanilla JavaScript (no build tools) |
+| UI Framework | [Svelte 5](https://svelte.dev) |
+| Build Tool | [Vite](https://vitejs.dev) |
+| Styling | Vanilla CSS (no Tailwind/Bootstrap) |
 | Storage | `localStorage` (persisted across sessions) |
 | Fonts | [Outfit](https://fonts.google.com/specimen/Outfit) + [DM Sans](https://fonts.google.com/specimen/DM+Sans) via Google Fonts |
 | PDF parsing | [pdf.js](https://mozilla.github.io/pdf.js/) (loaded on-demand) |
@@ -135,30 +167,31 @@ Use the **Test Connection** button to verify reachability before saving.
 ## Architecture & Refactoring
 
 ### Project Structure
-The app recently adopted a local-only ES Module architecture (no bundlers) organized under \`src/\`:
-- \`actions.js\`: Centralized action router for UI events.
-- \`model.js\`: Pure normalization for exact data shapes.
-- \`migrations.js\`: Strict schema versioning updates logic.
-- \`storage.js\`: LocalStorage adapter wrapping \`init()\` boundary.
-- \`llm/\`: Pluggable AI engine layer (Ollama, Anthropic, OpenAI).
-- \`ui/\`: Granular UI rendering files corresponding to exact views.
+The app is built as a Single Page Application using Svelte and organized under `src/`:
+- `lib/actions.js`: Centralized action router for UI events.
+- `lib/model.js`: Pure normalization for exact data shapes.
+- `lib/migrations.js`: Strict schema versioning updates logic.
+- `lib/storage.js`: LocalStorage adapter wrapping `init()` boundary.
+- `lib/stores.js`: Svelte writable and derived stores for state management.
+- `lib/llm/`: Pluggable AI engine layer (Ollama, Anthropic, OpenAI).
+- `views/` & `components/`: Granular Svelte components corresponding to exact views and UI elements.
 
 ### Storage Migrations
-Data format changes are handled transparently via a \`schemaVersion\`. Any structural changes explicitly increment the version constant. On startup (\`storage.init()\`), the app securely reads the existing objects and patches legacy keys to ensure absolute UI stability, before rendering the main dashboard.
+Data format changes are handled transparently via a `schemaVersion`. Any structural changes explicitly increment the version constant. On startup (`storage.init()`), the app securely reads the existing objects and patches legacy keys to ensure absolute UI stability, before rendering the main dashboard.
 
 ### Data Model Structure
-- \`app:schemaVersion\`: Integer governing the migration level applied to the system.
-- \`app:deviceId\`: Stable persistent string identifying the local environment.
-- \`profile\`: Central user config (skills, AI keys, custom priority logic).
-- \`assignments:index\`: Array of task IDs.
-- \`assignments:id\`: Core document containing normalized outputs like difficulty, priority score, arrays of sub-checklist IDs.
+- `app:schemaVersion`: Integer governing the migration level applied to the system.
+- `app:deviceId`: Stable persistent string identifying the local environment.
+- `profile`: Central user config (skills, AI keys, custom priority logic, app mode).
+- `assignments:index` & `projects:index`: Arrays of entity IDs.
+- `assignments:id` & `projects:id`: Core documents containing normalized outputs like difficulty, priority score, or status.
 
 ---
 
 ## Data & Privacy (Threat Model)
 
-- All data is stored locally in your browser's \`localStorage\`.
-- **API Keys**: When using cloud providers, keys are stored explicitly in plaintext within \`localStorage\`. Do not use this tool on a shared or un-trusted device. Avoid entering production keys with overly broad permissions; scope the keys strictly to LLM inference if possible.
+- All data is stored locally in your browser's `localStorage`.
+- **API Keys**: When using cloud providers, keys are stored explicitly in plaintext within `localStorage`. Do not use this tool on a shared or un-trusted device. Avoid entering production keys with overly broad permissions; scope the keys strictly to LLM inference if possible.
 - The AI is **never** asked to complete assignments, and requests execute strictly over HTTPS or localhost boundaries.
 
 ---
