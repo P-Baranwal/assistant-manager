@@ -3,7 +3,7 @@
     import { storage } from '$lib/storage';
     import { uuid } from '$lib/utils/id';
     import { analyzeAssignment } from '$lib/llm/client';
-    import Spinner from '../components/Spinner.svelte';
+    import Spinner from '../../components/Spinner.svelte';
 
     let title = '';
     let description = '';

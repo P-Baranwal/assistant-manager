@@ -4,7 +4,7 @@
     import { analyzeAssignment } from '$lib/llm/client';
     import { extractPdfText } from '$lib/parsers/pdf';
     import { uuid } from '$lib/utils/id';
-    import Spinner from '../components/Spinner.svelte';
+    import Spinner from '../../components/Spinner.svelte';
 
     let currentTab = 'paste';
     

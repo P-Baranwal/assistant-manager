@@ -4,15 +4,15 @@
     import { fetchHealth } from '$lib/llm/client';
     import { view, profile, providerReachable, assignments, tasks, theme } from '$lib/stores';
 
-    import Header from './components/Header.svelte';
+    import Header from './student/components/StudentHeader.svelte';
     import Spinner from './components/Spinner.svelte';
     import ConfirmModal from './components/ConfirmModal.svelte';
-    import Dashboard from './views/Dashboard.svelte';
-    import Add from './views/Add.svelte';
-    import Detail from './views/Detail.svelte';
-    import Settings from './views/Settings.svelte';
-    import TaskManager from './views/TaskManager.svelte';
-    import Calendar from './views/Calendar.svelte';
+    import Dashboard from './student/views/Dashboard.svelte';
+    import Add from './student/views/Add.svelte';
+    import Detail from './student/views/Detail.svelte';
+    import Settings from './student/views/Settings.svelte';
+    import TaskManager from './student/views/TaskManager.svelte';
+    import Calendar from './student/views/Calendar.svelte';
 
     let isInitializing = true;
     let globalSpinner = { show: false, text: 'Processing...' };

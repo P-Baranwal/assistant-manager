@@ -3,8 +3,8 @@
     import { storage } from '$lib/storage';
     import { analyzeAssignment } from '$lib/llm/client';
     import { uuid } from '$lib/utils/id';
-    import Spinner from '../components/Spinner.svelte';
-    import ConfirmModal from '../components/ConfirmModal.svelte';
+    import Spinner from '../../components/Spinner.svelte';
+    import ConfirmModal from '../../components/ConfirmModal.svelte';
     
     let detail = null;
     let loading = true;

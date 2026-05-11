@@ -112,7 +112,7 @@ a { color: var(--primary); text-decoration: none; cursor: pointer; }
 button, input, textarea, select { font-family: inherit; border: none; outline: none; }
 
 /* Layout */
-#app { max-width: 1000px; margin: 0 auto; padding: 2rem 1rem; }
+#app { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
 .hidden { display: none !important; }
 .flex { display: flex; }
 .flex-col { display: flex; flex-direction: column; }
@@ -130,7 +130,7 @@ button, input, textarea, select { font-family: inherit; border: none; outline: n
 /* Components */
 header { 
     display: flex; justify-content: space-between; align-items: center; 
-    padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); margin-bottom: 2rem;
+    padding-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 2rem;
 }
 
 .stat-bar { display: flex; gap: 1.5rem; font-family: var(--font-display); }

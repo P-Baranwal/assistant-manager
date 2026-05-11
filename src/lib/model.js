@@ -8,7 +8,7 @@ export function normalizeProfile(p) {
         customPriorityRule: p.customPriorityRule || "",
         provider: PROVIDER_NAMES.includes(p.provider) ? p.provider : "ollama",
         ollamaUrl: p.ollamaUrl || "http://localhost:11434",
-        ollamaModel: p.ollamaModel || "qwen2.5:14b",
+        ollamaModel: p.ollamaModel || "qwen2.5-coder:7b",
         apiKey: p.apiKey || ""
     };
 }
