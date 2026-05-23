@@ -1,5 +1,5 @@
 <script>
-    import { view, profile, theme } from '$lib/stores';
+    import { view, profile, theme, projects } from '$lib/stores';
     import { storage } from '$lib/storage';
     import { fetchHealth } from '$lib/llm/client';
     import { providerReachable } from '$lib/stores';
@@ -64,6 +64,33 @@
 </div>
 
 <div class="card mb-4 animate-fade">
+    <div class="card-title mb-4">Subscription & Interface</div>
+    <div class="form-group mb-4">
+        <label class="form-label">Active Tier</label>
+        <div class="flex flex-col gap-2 mt-2">
+            <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                <input type="radio" value="student" bind:group={p.tier}> Student Mode (Assignment Focus)
+            </label>
+            <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                <input type="radio" value="professional" bind:group={p.tier}> Professional Mode (Project/Kanban Focus)
+            </label>
+        </div>
+    </div>
+    
+    {#if p.tier === 'professional'}
+        <div class="form-group mb-0 pt-4" style="border-top:1px solid var(--border-color)">
+            <label class="form-label" for="default-project">Default Project (for newly created tasks)</label>
+            <select id="default-project" class="input" bind:value={p.defaultProjectId}>
+                <option value={null}>None (Send to Inbox)</option>
+                {#each $projects as proj}
+                    <option value={proj.id}>{proj.title}</option>
+                {/each}
+            </select>
+        </div>
+    {/if}
+</div>
+
+<div class="card mb-4 animate-fade">
     <div class="card-title mb-4">Theme Preferences</div>
     <div class="form-group mb-0">
         <label class="form-label" for="theme-select">UI Theme</label>
@@ -125,23 +152,30 @@
         <textarea id="set-rule" class="textarea" bind:value={p.customPriorityRule} placeholder="e.g., Prioritize all CS 201 tasks first regardless of deadline..." style="min-height:80px"></textarea>
     </div>
 
-    <div class="form-group mb-0">
-        <label class="form-label" for="group-preset">Default Baseline Sorting</label>
-        <div id="group-preset" class="flex flex-col gap-2 mt-2">
-            <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
-                <input type="radio" value="Balanced" bind:group={p.priorityPreset}> Balanced (Deadlines + Effort)
-            </label>
-            <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
-                <input type="radio" value="Deadline First" bind:group={p.priorityPreset}> Panic Mode (Strictly Deadlines)
-            </label>
-            <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
-                <input type="radio" value="Easy First" bind:group={p.priorityPreset}> Momentum (Short/Easy First)
-            </label>
-            <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
-                <input type="radio" value="Hard First" bind:group={p.priorityPreset}> Frog Eating (Hard/Long First)
-            </label>
+    {#if p.tier !== 'professional'}
+        <div class="form-group mb-0">
+            <label class="form-label" for="group-preset">Default Baseline Sorting</label>
+            <div id="group-preset" class="flex flex-col gap-2 mt-2">
+                <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                    <input type="radio" value="Balanced" bind:group={p.priorityPreset}> Balanced (Deadlines + Effort)
+                </label>
+                <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                    <input type="radio" value="Deadline First" bind:group={p.priorityPreset}> Panic Mode (Strictly Deadlines)
+                </label>
+                <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                    <input type="radio" value="Easy First" bind:group={p.priorityPreset}> Momentum (Short/Easy First)
+                </label>
+                <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                    <input type="radio" value="Hard First" bind:group={p.priorityPreset}> Frog Eating (Hard/Long First)
+                </label>
+            </div>
         </div>
-    </div>
+    {:else}
+        <div class="detail-card text-sm mb-4">
+            <strong>Sorting Directive</strong>
+            <p class="text-muted mt-1">Professional sorting uses dynamic ROI algorithm. Tasks are sorted based on Impact / Effort.</p>
+        </div>
+    {/if}
 </div>
 
 <button class="btn btn-primary w-full justify-center mb-8" on:click={saveSettings} style="padding: 0.75rem;">

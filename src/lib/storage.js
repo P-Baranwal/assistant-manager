@@ -1,6 +1,6 @@
 import { STORAGE_KEYS } from './constants.js';
 import { runMigrations } from './migrations.js';
-import { normalizeProfile, normalizeAssignment, normalizeTask } from './model.js';
+import { normalizeProfile, normalizeAssignment, normalizeTask, normalizeProject } from './model.js';
 import { uuid } from './utils/id.js';
 
 // Internal fallback polyfill for localStorage
@@ -48,18 +48,16 @@ export const storage = {
         await adapter.set(STORAGE_KEYS.PROFILE, normalizeProfile(p)); 
     },
     
+    // ── Assignment CRUD ──
     async getIndex() { 
         return (await adapter.get(STORAGE_KEYS.INDEX_ASSIGNMENTS)) || []; 
-    },
-    async getTaskIndex() {
-        return (await adapter.get(STORAGE_KEYS.INDEX_TASKS)) || [];
     },
     async getAssignment(id) { 
         const a = await adapter.get(`assignments:${id}`); 
         return a ? normalizeAssignment(a) : null;
     },
     async saveAssignment(task) {
-        const normTask = normalizeAssignment(task); // Ensure valid state on save
+        const normTask = normalizeAssignment(task);
         await adapter.set(`assignments:${normTask.id}`, normTask);
         let idx = await this.getIndex();
         if (!idx.includes(normTask.id)) {
@@ -74,6 +72,10 @@ export const storage = {
         await adapter.set(STORAGE_KEYS.INDEX_ASSIGNMENTS, idx);
     },
     
+    // ── Task CRUD ──
+    async getTaskIndex() {
+        return (await adapter.get(STORAGE_KEYS.INDEX_TASKS)) || [];
+    },
     async getTask(id) {
         const t = await adapter.get(`tasks:${id}`);
         return t ? normalizeTask(t) : null;
@@ -92,5 +94,29 @@ export const storage = {
         let idx = await this.getTaskIndex();
         idx = idx.filter(x => x !== id);
         await adapter.set(STORAGE_KEYS.INDEX_TASKS, idx);
+    },
+
+    // ── Project CRUD ──
+    async getProjectIndex() {
+        return (await adapter.get(STORAGE_KEYS.INDEX_PROJECTS)) || [];
+    },
+    async getProject(id) {
+        const p = await adapter.get(`projects:${id}`);
+        return p ? normalizeProject(p) : null;
+    },
+    async saveProject(project) {
+        const norm = normalizeProject(project);
+        await adapter.set(`projects:${norm.id}`, norm);
+        let idx = await this.getProjectIndex();
+        if (!idx.includes(norm.id)) {
+            idx.push(norm.id);
+            await adapter.set(STORAGE_KEYS.INDEX_PROJECTS, idx);
+        }
+    },
+    async deleteProject(id) {
+        await adapter.delete(`projects:${id}`);
+        let idx = await this.getProjectIndex();
+        idx = idx.filter(x => x !== id);
+        await adapter.set(STORAGE_KEYS.INDEX_PROJECTS, idx);
     }
 };

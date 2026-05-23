@@ -13,6 +13,7 @@ dist-ssr
 *.local
 
 # Editor directories and files
+.vite/*
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -26,5 +27,5 @@ dist-ssr
 #markdown files
 bugs.md
 new_features.md
-svelte-migration-plan.md
+
 

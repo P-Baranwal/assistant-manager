@@ -1,11 +1,15 @@
-# Dual-Tier Architecture: Implementation Plan v2
+# Dual-Tier Architecture: Detailed Implementation Plan v2
+
+This plan details the transition of the offline-first Assistant Manager app from a student-centric assignment manager to a dual-tier (Student / Professional) application.
+
+---
 
 ## Design Decisions (Locked)
 
 | Decision | Choice |
 |---|---|
 | Pro dashboard layout | Kanban board (To Do → In Progress → Blocked → Done) |
-| Mode switching | None — subscription tier determines interface at load time |
+| Mode switching | None — subscription tier determines interface at load time (Simulated via Settings toggle) |
 | Header | Two separate components: `StudentHeader.svelte`, `ProHeader.svelte` |
 | Epics tier | Not included — data model is flat: Projects → Tasks only |
 | Blocker field | `blockerNote: string` (plain text, avoids stale ID references) |
@@ -13,11 +17,11 @@
 
 ---
 
-## Phase 0: Structural Refactor (No New Features)
+## Phase 0: Structural Refactor (No New Features) - [Completed]
 
-Relocate existing files into the namespaced layout without changing any logic. The app must remain fully functional after this phase.
+Relocated existing files into the namespaced layout without changing any logic. The app remains fully functional.
 
-### New Directory Layout
+### Current Directory Layout
 
 ```
 src/
@@ -63,25 +67,15 @@ src/
   main.js
 ```
 
-### Steps
-
-1. Create directory structure above.
-2. Move all `src/views/*.svelte` → `src/student/views/`.
-3. Create `src/student/components/StudentHeader.svelte` by copying the current `Header.svelte` verbatim — no logic changes yet.
-4. Delete `src/components/Header.svelte`.
-5. Update all import paths in every moved file and in `App.svelte`.
-6. Update `vite.config.js` alias if needed.
-7. Run the app and confirm it is identical to pre-refactor.
-
 ---
 
 ## Phase 1: Data Model & Storage Layer
 
-All changes here are additive and backward-compatible. Existing student data must survive untouched.
+All changes here are additive and backward-compatible. Existing student data will survive untouched.
 
 ### 1.1 `src/lib/constants.js`
 
-```js
+```javascript
 // ADD to STORAGE_KEYS:
 INDEX_PROJECTS: 'projects:index'
 
@@ -93,8 +87,9 @@ export const TIERS = ['student', 'professional'];
 
 // ADD new constant:
 export const TASK_STATUS = ['todo', 'in_progress', 'blocked', 'done'];
-// Note: existing student tasks use 'active' and 'done'.
-// 'active' maps to 'todo' in pro context. Migration handles this.
+
+// Union of all possible status strings to prevent normalization errors:
+export const STATUS = ['active', 'done', 'todo', 'in_progress', 'blocked'];
 
 // ADD new constant:
 export const IMPACT = {
@@ -106,36 +101,66 @@ export const IMPACT = {
 ### 1.2 `src/lib/model.js`
 
 **Update `normalizeProfile`:**
-```js
+```javascript
 export function normalizeProfile(p) {
     if (!p) p = {};
     return {
-        // ... existing fields unchanged ...
-        tier: TIERS.includes(p.tier) ? p.tier : 'student'  // ADD THIS
+        // ... existing fields ...
+        skills: p.skills || "",
+        priorityPreset: p.priorityPreset || "Balanced",
+        customPriorityRule: p.customPriorityRule || "",
+        provider: p.provider || "ollama",
+        ollamaUrl: p.ollamaUrl || "http://localhost:11434",
+        ollamaModel: p.ollamaModel || "qwen2.5-coder:7b",
+        apiKey: p.apiKey || "",
+        
+        tier: TIERS.includes(p.tier) ? p.tier : 'student', // ADD THIS
+        defaultProjectId: p.defaultProjectId || null        // ADD THIS
     };
 }
 ```
 
-**Update `normalizeTask` — add pro fields with safe defaults:**
-```js
+**Update `normalizeTask`:**
+```javascript
 export function normalizeTask(t) {
     if (!t) t = {};
-    return {
-        // ... all existing fields unchanged ...
+    const base = {
+        id: t.id || null,
+        entityType: 'task',
+        title: t.title || "Untitled",
+        description: t.description || "",
+        status: STATUS.includes(t.status) ? t.status : "active",
+        priorityReasoning: t.priorityReasoning || "",
+        boost: normalizeBoost(t.boost),
+        deadline: t.deadline || null,
+        createdAt: t.createdAt || new Date().toISOString(),
+        updatedAt: t.updatedAt || new Date().toISOString(),
         
-        // Pro fields — safe defaults mean existing student tasks are unaffected
+        // Pro-specific fields
         projectId: t.projectId || null,
         actualHours: Math.max(0, parseFloat(t.actualHours) || 0),
-        impactScore: t.impactScore
-            ? Math.max(IMPACT.MIN, Math.min(IMPACT.MAX, parseInt(t.impactScore)))
-            : null,
+        estimatedHours: Math.max(0, parseFloat(t.estimatedHours) || 1),
+        impactScore: t.impactScore ? Math.max(IMPACT.MIN, Math.min(IMPACT.MAX, parseInt(t.impactScore))) : null,
         blockerNote: t.blockerNote || null
     };
+
+    // Calculate priority dynamically for pro tasks using ROI metric
+    if (base.impactScore !== null) {
+        // ROI score normalized: (Impact / estimatedHours) * 10
+        // Cap estimated hours floor at 0.5 to prevent divide-by-zero or massive inflation
+        const hoursFloor = Math.max(base.estimatedHours, 0.5);
+        base.priorityScore = Math.min(100, Math.max(0, Math.round((base.impactScore / hoursFloor) * 10)));
+        base.priorityReasoning = `ROI Priority: ${base.impactScore} impact vs ${base.estimatedHours}h estimated effort.`;
+    } else {
+        base.priorityScore = Math.max(0, Math.min(100, parseInt(t.priorityScore) || 50));
+    }
+
+    return base;
 }
 ```
 
 **Add `normalizeProject`:**
-```js
+```javascript
 export function normalizeProject(p) {
     if (!p) p = {};
     return {
@@ -150,18 +175,10 @@ export function normalizeProject(p) {
 }
 ```
 
-**Note on Task status for Pro:** Pro Kanban uses `todo | in_progress | blocked | done`. Student tasks use `active | done`. The `normalizeTask` STATUS check should remain lenient — accept all valid values from both sets. Update the STATUS constant:
-
-```js
-// constants.js
-export const STATUS = ['active', 'done', 'todo', 'in_progress', 'blocked'];
-```
-
 ### 1.3 `src/lib/storage.js`
 
-Add Project CRUD below the existing task methods:
-
-```js
+Add Project CRUD methods below the existing task methods:
+```javascript
 async getProjectIndex() {
     return (await adapter.get(STORAGE_KEYS.INDEX_PROJECTS)) || [];
 },
@@ -188,13 +205,9 @@ async deleteProject(id) {
 
 ### 1.4 `src/lib/migrations.js`
 
-Increment `LATEST_SCHEMA_VERSION` to `3`.
-
-```js
+Increment `LATEST_SCHEMA_VERSION` to `3`. Implement:
+```javascript
 if (currentVersion < 3) {
-    // v3: Add tier to profile; add pro fields to existing tasks;
-    //     initialize empty projects index.
-
     // Backfill profile tier
     let profile = await adapter.get(STORAGE_KEYS.PROFILE) || {};
     if (!profile.tier) {
@@ -202,12 +215,12 @@ if (currentVersion < 3) {
         await adapter.set(STORAGE_KEYS.PROFILE, profile);
     }
 
-    // Backfill pro fields on existing tasks (normalizeTask handles defaults)
+    // Backfill pro fields on existing tasks
     let tIndex = await adapter.get(STORAGE_KEYS.INDEX_TASKS) || [];
     for (const id of tIndex) {
         let task = await adapter.get(`tasks:${id}`);
         if (task) {
-            task = normalizeTask(task);  // adds projectId:null, etc.
+            task = normalizeTask(task);
             await adapter.set(`tasks:${id}`, task);
         }
     }
@@ -226,13 +239,11 @@ if (currentVersion < 3) {
 
 ### 1.5 `src/lib/stores.js`
 
-Add pro-specific stores below existing ones:
-
-```js
-// ADD
+Add pro-specific stores:
+```javascript
 export const projects = writable([]);
 
-// ADD derived: tasks grouped by projectId
+// Tasks grouped by projectId
 export const tasksByProject = derived(
     [projects, tasks],
     ([$projects, $tasks]) => {
@@ -247,47 +258,48 @@ export const tasksByProject = derived(
     }
 );
 
-// ADD derived: tasks with no project (orphans / inbox)
+// Tasks with no project (inbox/orphans)
 export const unassignedTasks = derived(
     tasks,
     ($tasks) => $tasks.filter(t => !t.projectId && t.status !== 'done')
 );
 
-// ADD derived: tasks flagged as blocked
+// Tasks flagged as blocked
 export const blockedTasks = derived(
     tasks,
     ($tasks) => $tasks.filter(t => t.status === 'blocked')
 );
 
-// ADD derived: high ROI tasks (high impact, low estimated hours)
-// ROI score = impactScore / max(estimatedHours, 0.5)
+// High ROI tasks (high impact, low estimated hours) sorted descending by ROI
 export const highRoiTasks = derived(
     tasks,
     ($tasks) => $tasks
-        .filter(t => t.impactScore && t.estimatedHours && t.status !== 'done')
-        .sort((a, b) => (b.impactScore / b.estimatedHours) - (a.impactScore / a.estimatedHours))
+        .filter(t => t.impactScore !== null && t.estimatedHours && t.status !== 'done')
+        .sort((a, b) => {
+            const roiA = a.impactScore / Math.max(a.estimatedHours, 0.5);
+            const roiB = b.impactScore / Math.max(b.estimatedHours, 0.5);
+            return roiB - roiA;
+        })
         .slice(0, 5)
 );
 ```
 
 ---
 
-## Phase 2: App Routing
+## Phase 2: App Routing & Settings
 
-### `src/App.svelte`
+### 2.1 `src/App.svelte`
 
-Load projects alongside tasks/assignments on `onMount`. Route based on `profile.tier`:
-
-```js
-// onMount additions:
+Load projects on mount and route dynamically based on `$profile.tier`:
+```javascript
+// onMount updates:
 const pIndex = await storage.getProjectIndex();
 const pPromises = pIndex.map(id => storage.getProject(id));
 const allProjects = (await Promise.all(pPromises)).filter(Boolean);
 projects.set(allProjects);
 ```
 
-Update the router:
-
+Update router in Svelte markup:
 ```svelte
 {#if $profile?.tier === 'professional'}
     <ProHeader />
@@ -312,95 +324,106 @@ Update the router:
 {/if}
 ```
 
-`Settings.svelte` is shared — it adapts internally based on `$profile.tier` for which fields to show.
+### 2.2 `src/student/views/Settings.svelte`
+
+- Add a **Subscription / Interface Mode** dropdown/radio group:
+  - Binds to `p.tier`. Options: `"student"` (labeled `"Student Mode"`) and `"professional"` (labeled `"Professional Mode"`).
+- Add conditional fields:
+  ```svelte
+  {#if p.tier === 'professional'}
+      <div class="form-group">
+          <label class="form-label" for="default-project">Default Project</label>
+          <select id="default-project" class="input" bind:value={p.defaultProjectId}>
+              <option value={null}>None (Send to Inbox)</option>
+              {#each $projects as proj}
+                  <option value={proj.id}>{proj.title}</option>
+              {/each}
+          </select>
+      </div>
+  {/if}
+  ```
+- Conditionally hide student priority presets:
+  ```svelte
+  {#if p.tier !== 'professional'}
+      <!-- Standard baseline sorting presets -->
+  {:else}
+      <div class="detail-card text-sm mb-4">
+          <strong>Sorting Directive</strong>
+          <p class="text-muted mt-1">Professional sorting uses dynamic ROI algorithm. Tasks are sorted based on Impact / Effort.</p>
+      </div>
+  {/if}
+  ```
 
 ---
 
-## Phase 3: Professional UI
+## Phase 3: Professional UI Components
 
 ### 3.1 `src/pro/components/ProHeader.svelte`
 
-Stat bar shows: **Active Projects · Tasks This Week · Blocked · High ROI**.
-
-Actions: **New Project** button (routes to `add`), **Settings** icon.
-
-No calendar or task-manager nav — Pro workflow is entirely project-scoped.
+A clean, stat-driven header bar for professionals:
+- Stats displayed:
+  - **Active Projects** (number of projects in `projects` store)
+  - **Tasks This Week** (number of active tasks due within 7 days)
+  - **Blocked Tasks** (from `blockedTasks` store)
+  - **High ROI Tasks** (from `highRoiTasks` store)
+- Action buttons:
+  - AI connection status indicator dot (green/amber).
+  - Settings icon button -> routes to `settings`.
+  - Dashboard navigation link -> routes to `dashboard`.
+  - **Add Project / WBS** (button-primary) -> routes to `add`.
 
 ### 3.2 `src/pro/views/ProDashboard.svelte`
 
-**Layout:** Kanban board. Four columns, horizontally scrollable on mobile.
-
-| Column | Filter |
-|---|---|
-| To Do | `status === 'todo'` |
-| In Progress | `status === 'in_progress'` |
-| Blocked | `status === 'blocked'` |
-| Done | `status === 'done'` (capped at last 10, collapsible) |
-
-Each column renders task cards from `tasksByProject`. Tasks without a project appear in an **Inbox** section above the board.
-
-Drag-and-drop between columns updates `task.status` and calls `storage.saveTask()`. If drag-and-drop is deferred, provide a status dropdown on each card as a fallback — do not ship the board without a way to move tasks.
-
-A **High ROI** sidebar (collapsible) pulls from the `highRoiTasks` derived store and highlights the top 5 tasks regardless of project.
+- **Kanban Board Container**:
+  - Horizontal list of columns:
+    - **To Do** (`status === 'todo'`)
+    - **In Progress** (`status === 'in_progress'`)
+    - **Blocked** (`status === 'blocked'`)
+    - **Done** (`status === 'done'`)
+  - Columns scroll vertically, layout wraps nicely on smaller viewports.
+- **Inbox Section**:
+  - Renders above the Kanban board for `unassignedTasks`. Allows easy viewing of tasks not linked to projects.
+- **Collapsible ROI Sidebar**:
+  - Highlights top 5 tasks from `highRoiTasks`.
+- **Fallbacks & Actions**:
+  - Tasks rendered as cards. Each card displays: Title, Project Name, Est. Hours, Impact Score, Blocker indicator (if status `'blocked'`).
+  - Card includes a compact selector dropdown to transition status immediately.
 
 ### 3.3 `src/pro/views/ProAdd.svelte`
 
-**Flow:**
-
-1. User selects or creates a Project (dropdown + "New Project" inline creation).
-2. User pastes a feature request / client brief into a textarea.
-3. Clicking **Generate Work Breakdown** calls the LLM with the WBS prompt (see Phase 4).
-4. A preview table renders the returned sub-tasks: title, estimated hours, impact score — all editable inline.
-5. User can delete rows or add blank ones manually.
-6. **Save All Tasks** writes each task to storage under the selected `projectId`.
-
-Do not auto-save on generation — the preview step is required per the design decision.
+Form for starting project tasks via AI:
+- **Project Selection**:
+  - Select existing project or choose inline **"+ Create New Project"** text field.
+- **Prompt Area**:
+  - Textarea to paste client briefs.
+- **WBS Preview Grid**:
+  - Renders a preview list of generated subtasks with input boxes for `title`, `estimatedHours`, and `impactScore`.
+  - Buttons to **Delete Row** and **Add New Row** to customize the AI-suggested plan before committing.
+- **Save Flow**:
+  - Decomposes final list, assigns `projectId` (or creates a project if new project inline title is entered), sets `status: 'todo'`, and batch writes tasks via `storage.saveTask`.
 
 ### 3.4 `src/pro/views/ProDetail.svelte`
 
-Extends task detail with pro-specific fields:
-
-- **Status selector:** `todo | in_progress | blocked | done` (replaces the binary Mark Done button for pro tasks).
-- **Impact Score:** 1–10 input, shown alongside estimated hours.
-- **Actual Hours:** Number input, compared to `estimatedHours` with a variance indicator (e.g., "2h over estimate").
-- **Blocker Note:** Plain text field. When non-empty, status is automatically set to `blocked` on save.
-- **Project:** Read-only display of the parent project name, with a link-style button to re-assign.
+Detailed inspector view for a task:
+- Status dropdown selector (`todo`, `in_progress`, `blocked`, `done`).
+- Blocker Note textarea (automatically sets status to `'blocked'` on submit if populated).
+- Actual Hours number input. Displays variance indicator against Est. Hours (e.g. `2.5h / 2h` with visual progress bar).
+- Impact Score input slider (1-10) showing computed Priority Score in real time.
+- Parent Project field: selector dropdown to re-assign task to a different project.
 
 ---
 
-## Phase 4: AI Engine Updates
+## Phase 4: AI Engine WBS Generator
 
-All changes are in `src/lib/llm/` — not a new file.
+### 4.1 `src/lib/llm/client.js`
 
-### 4.1 `src/lib/llm/contract.js`
-
-Add `impactScore` to the existing JSON schema prompt:
-
-```js
-export const JSON_SCHEMA_PROMPT = `
-...
-{
-  ...existing fields...,
-  "impactScore": integer (1-10) or null,
-  "impactReasoning": "one short sentence, null if not a pro task"
-}`;
-```
-
-Update `normalizeAnalysisResult` to handle `impactScore`:
-
-```js
-parsed.impactScore = parsed.impactScore
-    ? Math.max(1, Math.min(10, parseInt(parsed.impactScore)))
-    : null;
-```
-
-### 4.2 `src/lib/llm/client.js`
-
-Add a new exported function `generateWBS` alongside `analyzeAssignment`:
-
-```js
+Implement `generateWBS(brief, profile)`:
+```javascript
 export async function generateWBS(brief, profile) {
-    const plugin = providers[profile.provider || 'ollama'];
+    const providerName = profile.provider || 'ollama';
+    const plugin = providers[providerName];
+    if (!plugin) throw new Error(`Unknown provider: ${providerName}`);
+
     const v = plugin.validate(profile);
     if (!v.ok) throw new Error(`Provider invalid: ${v.message}`);
 
@@ -420,17 +443,16 @@ Each item must match this shape exactly:
 
 Rules:
 - 3 to 8 sub-tasks maximum
-- Titles must be specific and actionable (not "Research" — use "Research X API authentication options")
-- estimatedHours: realistic for a competent professional (not a beginner, not a hero)
-- impactScore: how much this sub-task moves the needle on the overall deliverable (1=minor, 10=critical path)
-- Today's date: ${new Date().toISOString().split('T')[0]}
+- Titles must be specific, granular, and actionable (e.g. "Research and configure OAuth2 auth endpoints" instead of "Research Auth")
+- estimatedHours: realistic for a competent professional developer
+- impactScore: how much this sub-task moves the needle on the core value (1=minor, 10=critical path)
 `.trim();
 
     const user = `Client brief / feature request:\n"""\n${brief}\n"""`;
 
     const raw = await plugin.analyze({ system, user, profile });
 
-    // Parse and validate
+    // Parse and clean
     let parsed;
     try {
         const clean = raw.replace(/```(?:json)?\s*/g, '').replace(/```/g, '').trim();
@@ -451,59 +473,95 @@ Rules:
 
 ---
 
-## Phase 5: Settings Updates
+## Phase 5: Styling & Layout Customizations
 
-### `src/views/Settings.svelte` (shared)
+### `style.css`
 
-`Settings` remains one file used by both tiers. Add a **Workspace** section at the top that only shows in certain contexts:
-
-- If `profile.tier === 'professional'`, show a **Default Project** dropdown (select which project new tasks fall into by default).
-- The AI Provider, Skills, and Priority sections remain as-is for both tiers.
-- The Priority Preset options are student-centric — hide them for pro users and replace with a short note that pro priority is computed from impact score vs estimated hours.
-
-The `tier` field itself is **not user-editable in Settings** — it is set at account/subscription time and should be treated as read-only in the UI.
+Append CSS classes to manage the Kanban and WBS previews:
+```css
+/* Pro Mode Styles */
+.kanban-board {
+    display: flex;
+    gap: 1.25rem;
+    overflow-x: auto;
+    padding: 1rem 0;
+    align-items: flex-start;
+}
+.kanban-column {
+    flex: 1;
+    min-width: 280px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+}
+.kanban-column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+.kanban-column-count {
+    background: var(--border-color);
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 99px;
+    color: var(--text-muted);
+}
+.kanban-card {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.kanban-card:hover {
+    border-color: var(--text-muted);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+}
+.status-select {
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.25rem;
+    font-size: 0.8125rem;
+}
+.wbs-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    background: var(--surface-color);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+.wbs-table th, .wbs-table td {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    text-align: left;
+}
+.wbs-table th {
+    background: var(--bg-color);
+    font-weight: 600;
+}
+```
 
 ---
 
 ## Verification Checklist
 
-### Phase 0 (Refactor)
-- [ ] App loads and is visually identical after file moves
-- [ ] All import paths resolve — no console errors
-- [ ] Student assignment creation, detail, and deletion all work
-- [ ] Calendar and task manager load correctly
+### Automated Tests
+- Run `npm run build` and ensure compilation has no errors.
+- Confirm Svelte components render cleanly with no exceptions.
 
-### Phase 1 (Data Layer)
-- [ ] Migration v3 runs on first load without errors
-- [ ] Existing student assignments and tasks are intact after migration
-- [ ] `profile.tier` is present and defaults to `'student'`
-- [ ] `projects:index` exists in localStorage after migration
-
-### Phase 2 (Routing)
-- [ ] Student tier renders existing interface unchanged
-- [ ] Manually setting `profile.tier = 'professional'` in localStorage and refreshing loads Pro views
-- [ ] Settings loads for both tiers
-
-### Phase 3 (Pro UI)
-- [ ] Kanban board renders four columns
-- [ ] Task status change persists on reload
-- [ ] WBS preview renders before saving
-- [ ] All generated tasks save under the correct `projectId`
-- [ ] Blocker note setting status to `blocked` moves card to Blocked column
-
-### Phase 4 (AI)
-- [ ] `generateWBS` returns 3–8 tasks for a sample brief
-- [ ] Malformed LLM responses throw a readable error (not a silent crash)
-- [ ] `impactScore` appears on pro task detail view after WBS import
-
----
-
-## What This Plan Does Not Include
-
-The following are explicitly out of scope for this implementation phase:
-
-- Payment / subscription gating — `tier` is set manually or via a future auth layer
-- Multi-device sync
-- Real drag-and-drop library integration (status dropdown is the fallback)
-- Notifications or deadline reminders
-- Export / reporting features
+### Manual Verification
+- [ ] Profile tier toggling in Settings works seamlessly, loading appropriate headers and layout components.
+- [ ] Database migration backfills default pro attributes onto existing student tasks.
+- [ ] Dynamic ROI calculation for priority works instantly when changing Est. Hours or Impact score.
+- [ ] Project CRUD correctly modifies the list and indices.
+- [ ] WBS AI generator processes user briefs, populates editable preview rows, and saves under the selected project.
+- [ ] Column updates on the Kanban board persist instantly and survive reload.
+- [ ] Entering a blocker note successfully switches task status to `'blocked'`. Removing the blocker note restores status to `'todo'`.
+- [ ] Top 5 ROI tasks are accurately surfaced in the collapsible sidebar.

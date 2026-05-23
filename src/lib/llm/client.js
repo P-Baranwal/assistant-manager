@@ -123,3 +123,55 @@ ${rawContent}
 
     return normalizeAnalysisResult(rawResponseText);
 }
+
+export async function generateWBS(brief, profile) {
+    const providerName = profile.provider || 'ollama';
+    const plugin = providers[providerName];
+    if (!plugin) throw new Error(`Unknown provider: ${providerName}`);
+
+    const v = plugin.validate(profile);
+    if (!v.ok) throw new Error(`Provider invalid: ${v.message}`);
+
+    const system = `
+You are a professional project planner. Given a client brief or feature request,
+decompose the work into concrete, actionable sub-tasks.
+
+Output ONLY a raw JSON array — no markdown, no fences, no preamble.
+Each item must match this shape exactly:
+[
+  {
+    "title": "string",
+    "estimatedHours": number,
+    "impactScore": integer (1-10)
+  }
+]
+
+Rules:
+- 3 to 8 sub-tasks maximum
+- Titles must be specific and actionable (not "Research" — use "Research X API authentication options")
+- estimatedHours: realistic for a competent professional (not a beginner, not a hero)
+- impactScore: how much this sub-task moves the needle on the overall deliverable (1=minor, 10=critical path)
+- Today's date: ${new Date().toISOString().split('T')[0]}
+`.trim();
+
+    const user = `Client brief / feature request:\n"""\n${brief}\n"""`;
+
+    const raw = await plugin.analyze({ system, user, profile });
+
+    // Parse and validate
+    let parsed;
+    try {
+        const clean = raw.replace(/```(?:json)?\s*/g, '').replace(/```/g, '').trim();
+        const arr = JSON.parse(clean.match(/\[[\s\S]*\]/)?.[0] || clean);
+        if (!Array.isArray(arr)) throw new Error();
+        parsed = arr.map(item => ({
+            title: item.title || 'Untitled Task',
+            estimatedHours: Math.max(0.25, parseFloat(item.estimatedHours) || 1),
+            impactScore: Math.max(1, Math.min(10, parseInt(item.impactScore) || 5))
+        }));
+    } catch {
+        throw new Error('Failed to parse WBS from AI response.');
+    }
+
+    return parsed;
+}

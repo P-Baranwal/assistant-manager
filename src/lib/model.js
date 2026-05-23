@@ -1,4 +1,4 @@
-import { TYPES, STATUS, PRESETS, PROVIDER_NAMES, DIFFICULTY, PRIORITY, ENTITY_TYPES } from './constants.js';
+import { TYPES, STATUS, PRESETS, PROVIDER_NAMES, DIFFICULTY, PRIORITY, ENTITY_TYPES, TIERS, IMPACT } from './constants.js';
 
 export function normalizeProfile(p) {
     if (!p) p = {};
@@ -9,7 +9,9 @@ export function normalizeProfile(p) {
         provider: PROVIDER_NAMES.includes(p.provider) ? p.provider : "ollama",
         ollamaUrl: p.ollamaUrl || "http://localhost:11434",
         ollamaModel: p.ollamaModel || "qwen2.5-coder:7b",
-        apiKey: p.apiKey || ""
+        apiKey: p.apiKey || "",
+        tier: TIERS.includes(p.tier) ? p.tier : 'student',
+        defaultProjectId: p.defaultProjectId || null
     };
 }
 
@@ -62,17 +64,49 @@ function normalizeChecklistItem(c) {
 
 export function normalizeTask(t) {
     if (!t) t = {};
-    return {
+    const base = {
         id: t.id || null,
         entityType: 'task',
         title: t.title || "Untitled",
         description: t.description || "",
         status: STATUS.includes(t.status) ? t.status : "active",
-        priorityScore: Math.max(PRIORITY.MIN, Math.min(PRIORITY.MAX, parseInt(t.priorityScore) || 50)),
         priorityReasoning: t.priorityReasoning || "",
         boost: normalizeBoost(t.boost),
         deadline: t.deadline || null,
         createdAt: t.createdAt || new Date().toISOString(),
-        updatedAt: t.updatedAt || new Date().toISOString()
+        updatedAt: t.updatedAt || new Date().toISOString(),
+
+        // Pro fields — safe defaults mean existing student tasks are unaffected
+        projectId: t.projectId || null,
+        actualHours: Math.max(0, parseFloat(t.actualHours) || 0),
+        estimatedHours: Math.max(0, parseFloat(t.estimatedHours) || 1),
+        impactScore: t.impactScore
+            ? Math.max(IMPACT.MIN, Math.min(IMPACT.MAX, parseInt(t.impactScore)))
+            : null,
+        blockerNote: t.blockerNote || null
+    };
+
+    // Calculate priority dynamically for pro tasks using ROI metric
+    if (base.impactScore !== null) {
+        const hoursFloor = Math.max(base.estimatedHours, 0.5);
+        base.priorityScore = Math.min(PRIORITY.MAX, Math.max(PRIORITY.MIN, Math.round((base.impactScore / hoursFloor) * 10)));
+        base.priorityReasoning = `ROI Priority: ${base.impactScore} impact vs ${base.estimatedHours}h estimated effort.`;
+    } else {
+        base.priorityScore = Math.max(PRIORITY.MIN, Math.min(PRIORITY.MAX, parseInt(t.priorityScore) || 50));
+    }
+
+    return base;
+}
+
+export function normalizeProject(p) {
+    if (!p) p = {};
+    return {
+        id: p.id || null,
+        entityType: 'project',
+        title: p.title || 'Untitled Project',
+        clientContext: p.clientContext || '',
+        status: ['active', 'done'].includes(p.status) ? p.status : 'active',
+        createdAt: p.createdAt || new Date().toISOString(),
+        updatedAt: p.updatedAt || new Date().toISOString()
     };
 }

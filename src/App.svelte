@@ -2,9 +2,10 @@
     import { onMount } from 'svelte';
     import { storage } from '$lib/storage';
     import { fetchHealth } from '$lib/llm/client';
-    import { view, profile, providerReachable, assignments, tasks, theme } from '$lib/stores';
+    import { view, profile, providerReachable, assignments, tasks, projects, theme } from '$lib/stores';
 
-    import Header from './student/components/StudentHeader.svelte';
+    // Student views
+    import StudentHeader from './student/components/StudentHeader.svelte';
     import Spinner from './components/Spinner.svelte';
     import ConfirmModal from './components/ConfirmModal.svelte';
     import Dashboard from './student/views/Dashboard.svelte';
@@ -13,6 +14,12 @@
     import Settings from './student/views/Settings.svelte';
     import TaskManager from './student/views/TaskManager.svelte';
     import Calendar from './student/views/Calendar.svelte';
+
+    // Pro views
+    import ProHeader from './pro/components/ProHeader.svelte';
+    import ProDashboard from './pro/views/ProDashboard.svelte';
+    import ProAdd from './pro/views/ProAdd.svelte';
+    import ProDetail from './pro/views/ProDetail.svelte';
 
     let isInitializing = true;
     let globalSpinner = { show: false, text: 'Processing...' };
@@ -37,9 +44,15 @@
         const allTasks = (await Promise.all(tPromises)).filter(Boolean);
         tasks.set(allTasks);
 
+        // 4. Load Projects
+        const pIndex = await storage.getProjectIndex();
+        const pPromises = pIndex.map(id => storage.getProject(id));
+        const allProjects = (await Promise.all(pPromises)).filter(Boolean);
+        projects.set(allProjects);
+
         isInitializing = false;
 
-        // 4. Background Health Check
+        // 5. Background Health Check
         try {
             const health = await fetchHealth(p);
             providerReachable.set(health.reachable);
@@ -47,7 +60,7 @@
             console.warn('Initial health check failed:', err);
         }
         
-        // 5. Initial Theme sync
+        // 6. Initial Theme sync
         const currentTheme = localStorage.getItem('theme') || 'system';
         const isDark = currentTheme === 'dark' || (currentTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
@@ -65,9 +78,21 @@
     <div class="flex items-center justify-center p-8 text-muted">
         <div class="spinner" style="border-top-color: var(--primary);"></div>
     </div>
+{:else if $profile?.tier === 'professional'}
+    <ProHeader />
+    <main class="view fade-in">
+        {#if $view === 'dashboard'}
+            <ProDashboard />
+        {:else if $view === 'add'}
+            <ProAdd />
+        {:else if $view === 'detail'}
+            <ProDetail />
+        {:else if $view === 'settings'}
+            <Settings />
+        {/if}
+    </main>
 {:else}
-    <Header />
-    
+    <StudentHeader />
     <main class="view fade-in">
         {#if $view === 'dashboard'}
             <Dashboard />
