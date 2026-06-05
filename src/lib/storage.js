@@ -118,5 +118,73 @@ export const storage = {
         let idx = await this.getProjectIndex();
         idx = idx.filter(x => x !== id);
         await adapter.set(STORAGE_KEYS.INDEX_PROJECTS, idx);
+    },
+
+    // ── Export / Import ──
+    async exportAll() {
+        const data = {
+            _exportVersion: 1,
+            _exportedAt: new Date().toISOString(),
+            profile: await adapter.get(STORAGE_KEYS.PROFILE),
+            assignments: {},
+            tasks: {},
+            projects: {},
+            assignmentIndex: await this.getIndex(),
+            taskIndex: await this.getTaskIndex(),
+            projectIndex: await this.getProjectIndex()
+        };
+
+        for (const id of data.assignmentIndex) {
+            data.assignments[id] = await adapter.get(`assignments:${id}`);
+        }
+        for (const id of data.taskIndex) {
+            data.tasks[id] = await adapter.get(`tasks:${id}`);
+        }
+        for (const id of data.projectIndex) {
+            data.projects[id] = await adapter.get(`projects:${id}`);
+        }
+
+        return data;
+    },
+
+    async importAll(data) {
+        if (!data || !data._exportVersion) {
+            throw new Error('Invalid export file: missing version marker.');
+        }
+
+        // Import profile
+        if (data.profile) {
+            await adapter.set(STORAGE_KEYS.PROFILE, normalizeProfile(data.profile));
+        }
+
+        // Import assignments
+        if (data.assignmentIndex && Array.isArray(data.assignmentIndex)) {
+            await adapter.set(STORAGE_KEYS.INDEX_ASSIGNMENTS, data.assignmentIndex);
+            for (const id of data.assignmentIndex) {
+                if (data.assignments && data.assignments[id]) {
+                    await adapter.set(`assignments:${id}`, normalizeAssignment(data.assignments[id]));
+                }
+            }
+        }
+
+        // Import tasks
+        if (data.taskIndex && Array.isArray(data.taskIndex)) {
+            await adapter.set(STORAGE_KEYS.INDEX_TASKS, data.taskIndex);
+            for (const id of data.taskIndex) {
+                if (data.tasks && data.tasks[id]) {
+                    await adapter.set(`tasks:${id}`, normalizeTask(data.tasks[id]));
+                }
+            }
+        }
+
+        // Import projects
+        if (data.projectIndex && Array.isArray(data.projectIndex)) {
+            await adapter.set(STORAGE_KEYS.INDEX_PROJECTS, data.projectIndex);
+            for (const id of data.projectIndex) {
+                if (data.projects && data.projects[id]) {
+                    await adapter.set(`projects:${id}`, normalizeProject(data.projects[id]));
+                }
+            }
+        }
     }
 };

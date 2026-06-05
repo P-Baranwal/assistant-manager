@@ -70,6 +70,9 @@
                 };
                 await storage.saveProject(newProject);
                 projectId = newProject.id;
+                selectedProjectId = newProject.id;
+                creatingNew = false;
+                newProjectTitle = '';
 
                 // Refresh projects store
                 const pIndex = await storage.getProjectIndex();
@@ -78,25 +81,38 @@
                 projects.set(allProjects);
             }
 
+            const savedTasks = [];
+            const failedTasks = [];
+
             // Save each task
             for (const pt of previewTasks) {
                 if (!pt.title.trim()) continue;
-                const task = {
-                    id: uuid(),
-                    entityType: 'task',
-                    title: pt.title.trim(),
-                    description: '',
-                    status: 'todo',
-                    projectId: projectId || null,
-                    estimatedHours: pt.estimatedHours,
-                    impactScore: pt.impactScore,
-                    actualHours: 0,
-                    blockerNote: null,
-                    deadline: null,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                };
-                await storage.saveTask(task);
+                try {
+                    const task = {
+                        id: pt.id || uuid(),
+                        entityType: 'task',
+                        title: pt.title.trim(),
+                        description: pt.description || '',
+                        status: 'todo',
+                        projectId: projectId || null,
+                        estimatedHours: pt.estimatedHours,
+                        impactScore: pt.impactScore,
+                        actualHours: pt.actualHours || 0,
+                        blockerNote: pt.blockerNote || null,
+                        deadline: pt.deadline || null,
+                        createdAt: pt.createdAt || new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    };
+                    await storage.saveTask(task);
+                    pt.id = task.id;
+                    pt.createdAt = task.createdAt;
+                    pt.saved = true;
+                    savedTasks.push(pt);
+                } catch (e) {
+                    pt.saved = false;
+                    failedTasks.push(pt);
+                    console.error("Failed to save task", pt, e);
+                }
             }
 
             // Refresh tasks store
@@ -105,8 +121,14 @@
             const allTasks = (await Promise.all(tPromises)).filter(Boolean);
             tasks.set(allTasks);
 
-            processing = false;
-            view.set('dashboard');
+            if (failedTasks.length > 0) {
+                previewTasks = failedTasks;
+                errorMsg = `Saved ${savedTasks.length} tasks, but ${failedTasks.length} tasks failed to save. You can review and retry saving the failed tasks.`;
+                processing = false;
+            } else {
+                processing = false;
+                view.set('dashboard');
+            }
         } catch (e) {
             errorMsg = e.message || 'Failed to save tasks.';
             processing = false;

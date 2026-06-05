@@ -1,6 +1,6 @@
 <script>
     import { priorityList, completedList, view, activeDetailId } from '$lib/stores';
-    import { calculateUrgency } from '$lib/utils/date';
+    import { calculateUrgency, parseDateLocal } from '$lib/utils/date';
     
     let currentTab = 'active'; // 'active' or 'completed'
     let squished = false;
@@ -16,7 +16,7 @@
 
     function formatDate(dateStr) {
         if (!dateStr) return '';
-        const d = new Date(dateStr);
+        const d = parseDateLocal(dateStr);
         return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
@@ -29,6 +29,15 @@
     
     function mapScore(t) {
         return t.boost?.active ? t.boost.boostedPriorityScore : t.priorityScore || 0;
+    }
+
+    function getUrgencyColor(deadline) {
+        const urg = calculateUrgency(deadline);
+        if (urg === 'Overdue') return 'var(--danger)';
+        if (urg === 'Due Today') return '#f97316';
+        if (urg === 'Due Tomorrow') return 'var(--diff-med)';
+        if (urg === 'This Week') return 'var(--primary)';
+        return 'var(--border-color)';
     }
     
     function openDetail(t) {
@@ -81,46 +90,54 @@
                      role="button" tabindex="0"
                      on:click={() => openDetail(t)}
                      on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && openDetail(t)}
-                     style="animation-delay: {i*0.05}s; cursor: pointer;">
+                     style="animation-delay: {i*0.05}s; cursor: pointer; opacity: {mapScore(t) < 30 ? 0.75 : 1}; border-left: 4px solid {getUrgencyColor(t.deadline)};">
                     {#if squished}
-                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%;">
                             <h3 class="card-title text-sm" style="margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{t.title}</h3>
-                            <div style="display: flex; align-items: center; justify-content: space-between; min-width: 130px; flex-shrink: 0; gap: 0.75rem;">
-                                <span style="font-size: 0.95rem; font-weight: 500;">{formatDate(t.deadline) || 'No date'}</span>
-                                <div class="score-pill" style="width: 20px; height: 20px; font-size: 0.65rem; {t.entityType === 'task' ? 'background:var(--border-color); color:var(--text-muted);' : `background:${diffColor}`}">{t.entityType === 'task' ? 'T' : (t.difficulty||'?')}</div>
+                            <div style="display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;">
+                                <span style="font-size: 0.85rem; font-weight: 500;" class="text-muted">{formatDate(t.deadline) || 'No date'}</span>
+                                <div class="score-ring" style="{t.entityType === 'task' ? 'border-color: var(--text-light); color: var(--text-muted);' : `border-color: ${diffColor}; color: ${diffColor};`}">{t.entityType === 'task' ? 'T' : (t.difficulty||'?')}</div>
                             </div>
                         </div>
                     {:else}
-                        <div class="card-header">
-                            <div>
-                                <div class="text-xs text-muted mb-1">
-                                    #{i+1} &middot; Score: {mapScore(t)} 
-                                    {#if t.boost?.active}
-                                        <svg class="svg-icon" viewBox="0 0 24 24" style="vertical-align: text-bottom; fill: var(--primary); width:14px;"><path d="M13.13 22.19L11.5 18.36C13.07 17.78 14.54 17 15.9 16.09L13.13 22.19ZM5.64 12.5L1.81 10.87L7.91 8.1C7 9.46 6.22 10.93 5.64 12.5ZM21.61 2.39C21.61 2.39 16.66 .269 9 5.36C5.79 7.5 3.39 10.71 2 14.53L5.53 16.06L7.33 18.15L8.2 21.05C8.84 21.32 9.54 21.46 10.25 21.46C11.53 21.46 12.75 21 13.75 20.25CL21.5 13C22 10.5 22 8.5 21.61 2.39Z"/></svg> (Boosted)
-                                    {/if}
-                                </div>
-                                <h3 class="card-title">{t.title}</h3>
+                        <div class="card-top-row">
+                            <span class="text-xs text-muted">
+                                #{i+1} &middot; Score: {mapScore(t)} 
+                                {#if t.boost?.active}
+                                    <svg class="svg-icon" viewBox="0 0 24 24" style="vertical-align: text-bottom; fill: var(--primary); width:12px; height:12px; margin-left: 2px;"><path d="M13.13 22.19L11.5 18.36C13.07 17.78 14.54 17 15.9 16.09L13.13 22.19ZM5.64 12.5L1.81 10.87L7.91 8.1C7 9.46 6.22 10.93 5.64 12.5ZM21.61 2.39C21.61 2.39 16.66 .269 9 5.36C5.79 7.5 3.39 10.71 2 14.53L5.53 16.06L7.33 18.15L8.2 21.05C8.84 21.32 9.54 21.46 10.25 21.46C11.53 21.46 12.75 21 13.75 20.25CL21.5 13C22 10.5 22 8.5 21.61 2.39Z"/></svg> <span style="color: var(--primary); font-weight: 500;">Boosted</span>
+                                {/if}
+                            </span>
+                        </div>
+                        
+                        <h3 class="card-title mt-1" style="font-size: 1.125rem; font-weight: 600; color: var(--text-main);">{t.title}</h3>
+                        
+                        <div class="card-bottom-row mt-2" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                            <div class="card-meta-compact" style="display: flex; flex-wrap: wrap; gap: 0.375rem; align-items: center;">
+                                {#if t.entityType === 'task'}
+                                    <span class="tag tag-gray">Task</span>
+                                {:else}
+                                    <span class="tag" style="background:{tagStyle.bg};color:{tagStyle.text}">{t.type}</span>
+                                {/if}
+                                {#if urg}
+                                    <span class="tag {urg==='Overdue'?'tag-danger':'tag-warning'}">{urg}</span>
+                                {/if}
+                                {#if t.estimatedHours}
+                                    <span class="text-xs text-muted">{t.estimatedHours}h est.</span>
+                                {/if}
                             </div>
-                            <div class="score-pill" style="{t.entityType === 'task' ? 'background:var(--border-color); color:var(--text-muted);' : `background:${diffColor}`}">{t.entityType === 'task' ? 'T' : (t.difficulty||'?')}</div>
+                            
+                            <div class="score-ring" style="{t.entityType === 'task' ? 'border-color: var(--text-light); color: var(--text-muted);' : `border-color: ${diffColor}; color: ${diffColor};`}" title="Difficulty">
+                                {t.entityType === 'task' ? 'T' : (t.difficulty||'?')}
+                            </div>
                         </div>
-                        <div class="card-meta">
-                            {#if t.entityType === 'task'}
-                                <span class="tag tag-gray">Task</span>
-                            {:else}
-                                <span class="tag" style="background:{tagStyle.bg};color:{tagStyle.text}">{t.type}</span>
-                            {/if}
-                            {#if urg}
-                                <span class="tag {urg==='Overdue'?'tag-danger':'tag-warning'}">{urg}</span>
-                            {/if}
-                            <span class="text-xs text-muted ml-auto">{t.estimatedHours ? t.estimatedHours+'h est.' : ''}</span>
-                        </div>
+                        
                         {#if totalCount > 0}
-                        <div class="checklist-progress bg">
-                            <div class="checklist-progress-bg">
-                                <div class="checklist-progress-fill" style="width:{pct}%"></div>
+                            <div class="checklist-progress mt-2">
+                                <div class="checklist-progress-bg">
+                                    <div class="checklist-progress-fill" style="width:{pct}%"></div>
+                                </div>
+                                <div class="text-xs text-muted mt-1">{doneCount}/{totalCount} tasks completed</div>
                             </div>
-                            <div class="text-xs text-muted mt-1">{doneCount}/{totalCount} tasks completed</div>
-                        </div>
                         {/if}
                     {/if}
                 </div>
@@ -135,31 +152,27 @@
             <h3 class="text-muted">No completed items yet</h3>
         </div>
     {:else}
-        <div class="card-list">
+        <div class="completed-list">
             {#each $completedList as t}
-                <div class="card card-hover {squished ? 'compact-card' : ''}" 
+                <div class="completed-row" 
                      role="button" tabindex="0"
                      on:click={() => openDetail(t)}
-                     on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && openDetail(t)}
-                     style="opacity: 0.7; cursor: pointer;">
-                    {#if squished}
-                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-                            <h3 class="card-title text-sm text-muted" style="margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: line-through;">{t.title}</h3>
-                            <div style="display: flex; align-items: center; justify-content: space-between; min-width: 130px; flex-shrink: 0; gap: 0.75rem;">
-                                <span style="font-size: 0.95rem; font-weight: 500;" class="text-muted">{formatDate(t.deadline) || 'No date'}</span>
-                                <div class="score-pill" style="width: 20px; height: 20px; font-size: 0.65rem; {t.entityType === 'task' ? 'background:var(--border-color); color:var(--text-muted);' : `background:${getDiffColor(t.difficulty)}`}">{t.entityType === 'task' ? 'T' : (t.difficulty||'?')}</div>
-                            </div>
-                        </div>
-                    {:else}
-                        <div class="card-header">
-                            <div class="flex items-center gap-2">
-                                {#if t.entityType === 'task'}
-                                    <span class="tag tag-gray" style="zoom: 0.8">Task</span>
-                                {/if}
-                                <h3 class="card-title text-muted" style="text-decoration:line-through">{t.title}</h3>
-                            </div>
-                        </div>
+                     on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && openDetail(t)}>
+                    <div class="completed-check">
+                        <svg class="svg-icon" viewBox="0 0 24 24" style="color: var(--success); width: 18px; height: 18px;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                    </div>
+                    <div class="completed-title">{t.title}</div>
+                    {#if t.entityType === 'task'}
+                        <span class="tag tag-gray" style="font-size: 0.7rem; padding: 0.1rem 0.4rem; margin-right: 0.5rem;">Task</span>
                     {/if}
+                    <div class="completed-meta ml-auto">
+                        {#if t.deadline}
+                            <span style="margin-right: 0.5rem;">Due {formatDate(t.deadline)}</span>
+                        {/if}
+                        {#if t.difficulty && t.entityType !== 'task'}
+                            <span class="tag tag-gray" style="zoom: 0.8">Diff: {t.difficulty}</span>
+                        {/if}
+                    </div>
                 </div>
             {/each}
         </div>

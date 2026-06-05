@@ -8,6 +8,7 @@
     import StudentHeader from './student/components/StudentHeader.svelte';
     import Spinner from './components/Spinner.svelte';
     import ConfirmModal from './components/ConfirmModal.svelte';
+    import UndoToast from './components/UndoToast.svelte';
     import Dashboard from './student/views/Dashboard.svelte';
     import Add from './student/views/Add.svelte';
     import Detail from './student/views/Detail.svelte';
@@ -117,6 +118,7 @@
     message={confirmModal.message} 
     onConfirm={confirmModal.onConfirm} 
     onCancel={confirmModal.onCancel} />
+<UndoToast />
 
 <style>
     .fade-in {

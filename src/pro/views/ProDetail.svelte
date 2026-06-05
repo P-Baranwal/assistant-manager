@@ -1,6 +1,7 @@
 <script>
     import { view, activeDetailId, profile, tasks, projects } from '$lib/stores';
     import { storage } from '$lib/storage';
+    import { undoStack } from '$lib/undoStack';
     import Spinner from '../../components/Spinner.svelte';
     import ConfirmModal from '../../components/ConfirmModal.svelte';
 
@@ -91,11 +92,17 @@
             title: "Mark Done",
             message: "Are you sure you want to mark this task complete?",
             onConfirm: async () => {
+                const snapshot = JSON.parse(JSON.stringify(detail));
                 detail.status = 'done';
                 detail.blockerNote = null;
                 await commitUpdate();
                 view.set('dashboard');
                 confirmConfig.show = false;
+
+                undoStack.push(`Marked "${snapshot.title}" done`, async () => {
+                    await storage.saveTask(snapshot);
+                    await refreshTasks();
+                });
             }
         };
     }
@@ -104,12 +111,18 @@
         confirmConfig = {
             show: true,
             title: "Delete Task",
-            message: "This cannot be undone.",
+            message: "This action can be undone for a few seconds after.",
             onConfirm: async () => {
+                const snapshot = JSON.parse(JSON.stringify(detail));
                 await storage.deleteTask(detail.id);
                 await refreshTasks();
                 view.set('dashboard');
                 confirmConfig.show = false;
+
+                undoStack.push(`Deleted "${snapshot.title}"`, async () => {
+                    await storage.saveTask(snapshot);
+                    await refreshTasks();
+                });
             }
         };
     }

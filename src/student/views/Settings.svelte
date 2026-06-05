@@ -1,8 +1,9 @@
 <script>
-    import { view, profile, theme, projects } from '$lib/stores';
+    import { view, profile, theme, projects, assignments, tasks } from '$lib/stores';
     import { storage } from '$lib/storage';
-    import { fetchHealth } from '$lib/llm/client';
+    import { fetchHealth, analyzeAssignment } from '$lib/llm/client';
     import { providerReachable } from '$lib/stores';
+    import ConfirmModal from '../../components/ConfirmModal.svelte';
 
     const MODEL_HINTS = {
         ollama: 'e.g. qwen2.5:14b, llama3.1:8b, phi4',
@@ -24,6 +25,17 @@
 
     let testResult = '';
     let testColor = 'var(--text-main)';
+
+    // Re-score state
+    let rescoring = false;
+    let rescoreProgress = '';
+    let rescoreError = '';
+
+    // Export/Import state
+    let importFileInput;
+    let importMsg = '';
+    let importColor = 'var(--text-main)';
+    let confirmConfig = { show: false, title: '', message: '', onConfirm: null };
 
     async function testProvider() {
         testColor = 'var(--text-main)';
@@ -55,6 +67,132 @@
         } catch(e) {}
         
         view.set('dashboard');
+    }
+
+    // ── Re-score All ──
+    async function rescoreAll() {
+        rescoring = true;
+        rescoreError = '';
+
+        // Save current profile first so AI uses latest skills
+        await storage.setProfile(p);
+        profile.set(p);
+
+        const allAssignments = [...$assignments].filter(a => a.status !== 'done');
+        const total = allAssignments.length;
+        let done = 0;
+        let failed = 0;
+
+        for (const a of allAssignments) {
+            rescoreProgress = `Re-scoring ${done + 1} of ${total}...`;
+            try {
+                const rawContent = a.rawContent || `Title: ${a.title}`;
+                const rec = await analyzeAssignment(rawContent, p);
+                a.difficulty = rec.difficulty;
+                a.difficultyReasoning = rec.difficultyReasoning;
+                a.priorityScore = rec.priorityScore;
+                a.priorityReasoning = rec.priorityReasoning;
+                a.estimatedHours = rec.estimatedHours;
+                a.estimatedHoursReasoning = rec.estimatedHoursReasoning;
+                a.analyzedAt = new Date().toISOString();
+                await storage.saveAssignment(a);
+            } catch (err) {
+                failed++;
+                console.warn(`Failed to re-score "${a.title}":`, err);
+            }
+            done++;
+        }
+
+        // Refresh stores
+        const allIds = await storage.getIndex();
+        const all = (await Promise.all(allIds.map(id => storage.getAssignment(id)))).filter(Boolean);
+        assignments.set(all);
+
+        rescoreProgress = failed > 0
+            ? `Done! ${done - failed}/${total} updated, ${failed} failed.`
+            : `Done! All ${total} assignments re-scored.`;
+        rescoring = false;
+    }
+
+    // ── Export ──
+    async function handleExport() {
+        try {
+            const data = await storage.exportAll();
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `assistant-manager-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            importMsg = 'Export downloaded!';
+            importColor = 'var(--success, green)';
+        } catch (err) {
+            importMsg = 'Export failed: ' + err.message;
+            importColor = 'var(--danger, red)';
+        }
+    }
+
+    // ── Import ──
+    function handleImportClick() {
+        importFileInput?.click();
+    }
+
+    async function handleImportFile(e) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            if (!data._exportVersion) {
+                importMsg = 'Invalid file: not a valid export.';
+                importColor = 'var(--danger, red)';
+                return;
+            }
+
+            confirmConfig = {
+                show: true,
+                title: 'Import Data',
+                message: `This will replace all your current data with the contents of "${file.name}". Are you sure?`,
+                onConfirm: async () => {
+                    confirmConfig.show = false;
+                    try {
+                        await storage.importAll(data);
+                        
+                        // Reload all stores
+                        const prof = await storage.getProfile();
+                        profile.set(prof);
+                        p = prof;
+
+                        const aIdx = await storage.getIndex();
+                        const allA = (await Promise.all(aIdx.map(id => storage.getAssignment(id)))).filter(Boolean);
+                        assignments.set(allA);
+
+                        const tIdx = await storage.getTaskIndex();
+                        const allT = (await Promise.all(tIdx.map(id => storage.getTask(id)))).filter(Boolean);
+                        tasks.set(allT);
+
+                        const pIdx = await storage.getProjectIndex();
+                        const allP = (await Promise.all(pIdx.map(id => storage.getProject(id)))).filter(Boolean);
+                        projects.set(allP);
+
+                        importMsg = 'Import successful! All data restored.';
+                        importColor = 'var(--success, green)';
+                    } catch (err) {
+                        importMsg = 'Import failed: ' + err.message;
+                        importColor = 'var(--danger, red)';
+                    }
+                }
+            };
+        } catch (err) {
+            importMsg = 'Could not parse file: ' + err.message;
+            importColor = 'var(--danger, red)';
+        }
+
+        // Reset file input so the same file can be re-selected
+        if (importFileInput) importFileInput.value = '';
     }
 </script>
 
@@ -176,11 +314,45 @@
             <p class="text-muted mt-1">Professional sorting uses dynamic ROI algorithm. Tasks are sorted based on Impact / Effort.</p>
         </div>
     {/if}
+
+    <div class="mt-4 pt-4" style="border-top:1px solid var(--border-color)">
+        <div class="flex items-center gap-4">
+            <button class="btn" on:click={rescoreAll} disabled={rescoring || $assignments.filter(a => a.status !== 'done').length === 0}>
+                {rescoring ? 'Re-scoring...' : '🔄 Re-score All Assignments'}
+            </button>
+            {#if rescoreProgress}
+                <span class="text-sm" style="color: {rescoring ? 'var(--text-muted)' : 'var(--success)'}; font-weight: 500;">
+                    {rescoreProgress}
+                </span>
+            {/if}
+        </div>
+        <p class="text-xs text-muted mt-2">Re-analyzes all active assignments with the current skills profile and AI provider. Useful after updating your skills.</p>
+    </div>
+</div>
+
+<div class="card mb-4 animate-fade">
+    <div class="card-title mb-4">Data Management</div>
+    <p class="text-sm text-muted mb-4">All your data is stored locally in the browser. Use these tools to back up or restore your data.</p>
+    
+    <div class="flex gap-3 items-center flex-wrap">
+        <button class="btn" on:click={handleExport}>
+            📤 Export JSON Backup
+        </button>
+        <button class="btn" on:click={handleImportClick}>
+            📥 Import JSON Backup
+        </button>
+        <input type="file" accept=".json,application/json" bind:this={importFileInput} on:change={handleImportFile} style="display:none" aria-label="Import file">
+    </div>
+    {#if importMsg}
+        <p class="text-sm mt-3" style="color: {importColor}; font-weight: 500;">{importMsg}</p>
+    {/if}
 </div>
 
 <button class="btn btn-primary w-full justify-center mb-8" on:click={saveSettings} style="padding: 0.75rem;">
     Save Profiles & Preferences
 </button>
+
+<ConfirmModal bind:show={confirmConfig.show} title={confirmConfig.title} message={confirmConfig.message} onConfirm={confirmConfig.onConfirm} />
 
 <style>
     .animate-fade {

@@ -1,6 +1,6 @@
 <script>
     import { priorityList, completedList, view, activeDetailId } from '$lib/stores';
-    import { calculateUrgency } from '$lib/utils/date';
+    import { calculateUrgency, parseDateLocal } from '$lib/utils/date';
 
     let currentDate = new Date();
     let currentMonth = currentDate.getMonth(); // 0 to 11
@@ -22,8 +22,8 @@
         const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         
         const itemsThisDay = datedItems.filter(item => {
-            const itemDate = new Date(item.deadline);
-            // Handle timezone variance by comparing year, month, date directly if possible
+            const itemDate = parseDateLocal(item.deadline);
+            // parseDateLocal handles YYYY-MM-DD as local midnight
             // We'll normalize both
             return itemDate.getFullYear() === currentYear &&
                    itemDate.getMonth() === currentMonth &&

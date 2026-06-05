@@ -1,6 +1,7 @@
 <script>
     import { tasks, projects, unassignedTasks, highRoiTasks, view, activeDetailId } from '$lib/stores';
     import { storage } from '$lib/storage';
+    import { undoStack } from '$lib/undoStack';
 
     // Kanban columns from all tasks
     $: todoTasks = $tasks.filter(t => t.status === 'todo');
@@ -23,6 +24,7 @@
     }
 
     async function changeStatus(task, newStatus) {
+        const snapshot = JSON.parse(JSON.stringify(task));
         task.status = newStatus;
         task.updatedAt = new Date().toISOString();
 
@@ -35,6 +37,13 @@
 
         await storage.saveTask(task);
         await refreshTasks();
+
+        if (newStatus === 'done') {
+            undoStack.push(`Marked "${snapshot.title}" done`, async () => {
+                await storage.saveTask(snapshot);
+                await refreshTasks();
+            });
+        }
     }
 
     async function refreshTasks() {

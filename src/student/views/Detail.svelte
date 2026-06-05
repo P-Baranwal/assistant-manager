@@ -3,6 +3,7 @@
     import { storage } from '$lib/storage';
     import { analyzeAssignment } from '$lib/llm/client';
     import { uuid } from '$lib/utils/id';
+    import { undoStack } from '$lib/undoStack';
     import Spinner from '../../components/Spinner.svelte';
     import ConfirmModal from '../../components/ConfirmModal.svelte';
     
@@ -81,10 +82,23 @@
             title: "Mark Done",
             message: "Are you sure you want to mark this complete?",
             onConfirm: async () => {
+                const snapshot = JSON.parse(JSON.stringify(detail));
+                const entityType = detail.entityType;
                 detail.status = 'done';
                 await commitUpdate();
                 view.set('dashboard');
                 confirmConfig.show = false;
+
+                undoStack.push(`Marked "${snapshot.title}" done`, async () => {
+                    snapshot.status = snapshot.status === 'done' ? 'active' : snapshot.status;
+                    if (entityType === 'task') {
+                        await storage.saveTask(snapshot);
+                        await refreshTasks();
+                    } else {
+                        await storage.saveAssignment(snapshot);
+                        await refreshAssignments();
+                    }
+                });
             }
         };
     }
@@ -93,9 +107,11 @@
         confirmConfig = {
             show: true,
             title: "Delete " + (detail.entityType === 'task' ? 'Task' : 'Assignment'),
-            message: "This cannot be undone.",
+            message: "This action can be undone for a few seconds after.",
             onConfirm: async () => {
-                if (detail.entityType === 'task') {
+                const snapshot = JSON.parse(JSON.stringify(detail));
+                const entityType = detail.entityType;
+                if (entityType === 'task') {
                     await storage.deleteTask(detail.id);
                     await refreshTasks();
                 } else {
@@ -104,6 +120,16 @@
                 }
                 view.set('dashboard');
                 confirmConfig.show = false;
+
+                undoStack.push(`Deleted "${snapshot.title}"`, async () => {
+                    if (entityType === 'task') {
+                        await storage.saveTask(snapshot);
+                        await refreshTasks();
+                    } else {
+                        await storage.saveAssignment(snapshot);
+                        await refreshAssignments();
+                    }
+                });
             }
         };
     }
