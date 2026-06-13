@@ -28,4 +28,9 @@ dist-ssr
 bugs.md
 new_features.md
 
-
+# Local env files
+.env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

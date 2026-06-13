@@ -5,9 +5,10 @@ export const profile = writable(null);             // user profile object
 export const providerReachable = writable(false);  // AI status dot
 export const activeDetailId = writable(null);      // detail view target
 export const activeDraft = writable(null);         // add view draft
+export const authStore = writable({ user: null, session: null, isGuest: true });
 
-// Theme defaults to localstorage or 'system'
-export const theme = writable(localStorage.getItem('theme') || 'system');
+// Theme defaults to 'system' and will be loaded asynchronously during initialization
+export const theme = writable('system');
 
 // We hold all loaded assignments and tasks in memory for reactivity
 export const assignments = writable([]);

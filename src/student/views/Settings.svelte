@@ -1,9 +1,38 @@
 <script>
-    import { view, profile, theme, projects, assignments, tasks } from '$lib/stores';
+    import { view, profile, theme, projects, assignments, tasks, authStore } from '$lib/stores';
     import { storage } from '$lib/storage';
     import { fetchHealth, analyzeAssignment } from '$lib/llm/client';
     import { providerReachable } from '$lib/stores';
+    import { supabase } from '$lib/supabase';
+    import { SUBSCRIPTION_LABELS } from '$lib/constants';
     import ConfirmModal from '../../components/ConfirmModal.svelte';
+
+    async function handleSignOut() {
+        try {
+            await supabase.auth.signOut();
+            view.set('dashboard');
+        } catch (err) {
+            console.error("Sign out error:", err);
+        }
+    }
+
+    async function openPortal() {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-portal-session`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                },
+            });
+            const data = await res.json();
+            if (data.url) window.location.href = data.url;
+        } catch (err) {
+            console.error("Portal error:", err);
+        }
+    }
 
     const MODEL_HINTS = {
         ollama: 'e.g. qwen2.5:14b, llama3.1:8b, phi4',
@@ -37,6 +66,8 @@
     let importColor = 'var(--text-main)';
     let confirmConfig = { show: false, title: '', message: '', onConfirm: null };
 
+    $: canAccessProMode = p.subscription === 'pro' || p.subscription === 'team';
+
     async function testProvider() {
         testColor = 'var(--text-main)';
         testResult = 'Testing...';
@@ -57,10 +88,13 @@
     }
 
     async function saveSettings() {
+        // Enforce mode restrictions based on subscription
+        if (!canAccessProMode && p.mode === 'professional') {
+            p.mode = 'student';
+        }
         await storage.setProfile(p);
         profile.set(p);
         
-        // Background health check string updates
         try {
             const h = await fetchHealth(p);
             providerReachable.set(h.reachable);
@@ -204,18 +238,23 @@
 <div class="card mb-4 animate-fade">
     <div class="card-title mb-4">Subscription & Interface</div>
     <div class="form-group mb-4">
-        <label class="form-label">Active Tier</label>
+        <label class="form-label">Interface Mode</label>
         <div class="flex flex-col gap-2 mt-2">
             <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
-                <input type="radio" value="student" bind:group={p.tier}> Student Mode (Assignment Focus)
+                <input type="radio" value="student" bind:group={p.mode}> Student Mode (Assignment Focus)
             </label>
             <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
-                <input type="radio" value="professional" bind:group={p.tier}> Professional Mode (Project/Kanban Focus)
+                <input type="radio" value="professional" bind:group={p.mode} disabled={!canAccessProMode}> Professional Mode (Project/Kanban Focus)
+                {#if !canAccessProMode}
+                    <span class="upgrade-hint">
+                        <button type="button" class="text-link" on:click={() => view.set('pricing')}>Upgrade to Pro</button> to unlock
+                    </span>
+                {/if}
             </label>
         </div>
     </div>
     
-    {#if p.tier === 'professional'}
+    {#if p.mode === 'professional'}
         <div class="form-group mb-0 pt-4" style="border-top:1px solid var(--border-color)">
             <label class="form-label" for="default-project">Default Project (for newly created tasks)</label>
             <select id="default-project" class="input" bind:value={p.defaultProjectId}>
@@ -229,10 +268,35 @@
 </div>
 
 <div class="card mb-4 animate-fade">
+    <div class="card-title mb-4">Billing</div>
+    {#if $authStore.isGuest}
+        <p class="text-sm text-muted mb-3">Sign up to manage your subscription and unlock premium features.</p>
+        <button class="btn btn-primary" on:click={() => view.set('auth')}>Sign Up Free</button>
+    {:else if p.subscription === 'free'}
+        <p class="text-sm mb-3">You're on the <strong>Free</strong> plan. Upgrade for unlimited tasks and AI analyses.</p>
+        <button class="btn btn-primary" on:click={() => view.set('pricing')}>View Plans & Upgrade</button>
+    {:else}
+        <div class="flex flex-col gap-2 mb-3">
+            <p class="text-sm">Plan: <strong>{SUBSCRIPTION_LABELS[p.subscription] || p.subscription}</strong></p>
+            {#if p.subscriptionStatus === 'active' && p.currentPeriodEnd}
+                <p class="text-sm text-muted">Next billing: {new Date(p.currentPeriodEnd).toLocaleDateString()}</p>
+            {/if}
+            {#if p.subscriptionStatus}
+                <p class="text-sm text-muted">Status: {p.subscriptionStatus}</p>
+            {/if}
+        </div>
+        <div class="flex gap-3">
+            <button class="btn btn-primary" on:click={openPortal}>Manage Subscription</button>
+            <button class="btn" on:click={() => view.set('pricing')}>Change Plan</button>
+        </div>
+    {/if}
+</div>
+
+<div class="card mb-4 animate-fade">
     <div class="card-title mb-4">Theme Preferences</div>
     <div class="form-group mb-0">
         <label class="form-label" for="theme-select">UI Theme</label>
-        <select id="theme-select" class="input" bind:value={$theme} on:change={() => localStorage.setItem('theme', $theme)}>
+        <select id="theme-select" class="input" bind:value={$theme} on:change={() => storage.setTheme($theme)}>
             <option value="system">System Default</option>
             <option value="light">Light</option>
             <option value="dark">Dark</option>
@@ -290,7 +354,7 @@
         <textarea id="set-rule" class="textarea" bind:value={p.customPriorityRule} placeholder="e.g., Prioritize all CS 201 tasks first regardless of deadline..." style="min-height:80px"></textarea>
     </div>
 
-    {#if p.tier !== 'professional'}
+    {#if p.mode !== 'professional'}
         <div class="form-group mb-0">
             <label class="form-label" for="group-preset">Default Baseline Sorting</label>
             <div id="group-preset" class="flex flex-col gap-2 mt-2">
@@ -332,7 +396,7 @@
 
 <div class="card mb-4 animate-fade">
     <div class="card-title mb-4">Data Management</div>
-    <p class="text-sm text-muted mb-4">All your data is stored locally in the browser. Use these tools to back up or restore your data.</p>
+    <p class="text-sm text-muted mb-4">{#if !$authStore.isGuest}Your data is synced to the cloud. Use these tools to create a local backup or restore from one.{:else}All your data is stored locally in the browser. Use these tools to back up or restore your data.{/if}</p>
     
     <div class="flex gap-3 items-center flex-wrap">
         <button class="btn" on:click={handleExport}>
@@ -364,4 +428,18 @@
     }
     .w-full { width: 100%; }
     .mb-0 { margin-bottom: 0; }
+    .upgrade-hint {
+        font-size: 0.75rem;
+        color: var(--muted);
+    }
+    .text-link {
+        background: none;
+        border: none;
+        color: var(--primary);
+        font-size: 0.75rem;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 0;
+        text-decoration: underline;
+    }
 </style>

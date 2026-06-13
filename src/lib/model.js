@@ -1,4 +1,4 @@
-import { TYPES, STATUS, PRESETS, PROVIDER_NAMES, DIFFICULTY, PRIORITY, ENTITY_TYPES, TIERS, IMPACT } from './constants.js';
+import { TYPES, STATUS, PRESETS, PROVIDER_NAMES, DIFFICULTY, PRIORITY, ENTITY_TYPES, TIERS, IMPACT, SUBSCRIPTION_TIERS } from './constants.js';
 
 export function normalizeProfile(p) {
     if (!p) p = {};
@@ -10,7 +10,8 @@ export function normalizeProfile(p) {
         ollamaUrl: p.ollamaUrl || "http://localhost:11434",
         ollamaModel: p.ollamaModel || "qwen2.5-coder:7b",
         apiKey: p.apiKey || "",
-        tier: TIERS.includes(p.tier) ? p.tier : 'student',
+        mode: TIERS.includes(p.mode) ? p.mode : 'student',
+        subscription: SUBSCRIPTION_TIERS.includes(p.subscription) ? p.subscription : 'free',
         defaultProjectId: p.defaultProjectId || null
     };
 }

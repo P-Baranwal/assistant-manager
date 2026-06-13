@@ -2,25 +2,30 @@ import { STORAGE_KEYS } from './constants.js';
 import { runMigrations } from './migrations.js';
 import { normalizeProfile, normalizeAssignment, normalizeTask, normalizeProject } from './model.js';
 import { uuid } from './utils/id.js';
+import { LocalAdapter } from './storage/local.adapter.js';
+import { SupabaseAdapter } from './storage/supabase.adapter.js';
+import { authStore } from './stores.js';
 
-// Internal fallback polyfill for localStorage
-if (!window.storagePolyfill) {
-    window.storagePolyfill = {
-        async get(key) { 
-            const v = localStorage.getItem(key); 
-            return v ? JSON.parse(v) : null; 
-        },
-        async set(key, val) { localStorage.setItem(key, JSON.stringify(val)); },
-        async delete(key) { localStorage.removeItem(key); }
-    };
-}
+const localAdapter = new LocalAdapter();
+const supabaseAdapter = new SupabaseAdapter();
 
-// Impure Storage Adapter
-export const adapter = {
-    get: async (key) => await window.storagePolyfill.get(key),
-    set: async (key, val) => await window.storagePolyfill.set(key, val),
-    delete: async (key) => await window.storagePolyfill.delete(key)
-};
+let activeAdapter = localAdapter;
+
+// Listen to authState changes to dynamically swap adapters
+authStore.subscribe(state => {
+    if (state && state.user) {
+        activeAdapter = supabaseAdapter;
+    } else {
+        activeAdapter = localAdapter;
+    }
+});
+
+// Export a proxy object so existing references to `adapter` route dynamically
+export const adapter = new Proxy({}, {
+    get(target, prop) {
+        return (...args) => activeAdapter[prop](...args);
+    }
+});
 
 export const storage = {
     /**
@@ -46,6 +51,13 @@ export const storage = {
     },
     async setProfile(p) { 
         await adapter.set(STORAGE_KEYS.PROFILE, normalizeProfile(p)); 
+    },
+
+    async getTheme() {
+        return (await adapter.get('theme')) || 'system';
+    },
+    async setTheme(themeVal) {
+        await adapter.set('theme', themeVal);
     },
     
     // ── Assignment CRUD ──
@@ -186,5 +198,64 @@ export const storage = {
                 }
             }
         }
+    },
+
+    async migrateLocalToCloud() {
+        const localData = await localAdapter.getAll();
+        
+        let assignmentsMigrated = 0;
+        let tasksMigrated = 0;
+        let projectsMigrated = 0;
+
+        // Migrate profile
+        if (localData['profile']) {
+            await supabaseAdapter.set('profile', localData['profile']);
+        }
+        if (localData['theme']) {
+            await supabaseAdapter.set('theme', localData['theme']);
+        }
+
+        // Migrate assignments
+        const assignmentsIndex = localData['assignments:index'] || [];
+        for (const id of assignmentsIndex) {
+            const assignment = localData[`assignments:${id}`];
+            if (assignment) {
+                await supabaseAdapter.set(`assignments:${id}`, assignment);
+                assignmentsMigrated++;
+            }
+        }
+
+        // Migrate tasks
+        const tasksIndex = localData['tasks:index'] || [];
+        for (const id of tasksIndex) {
+            const task = localData[`tasks:${id}`];
+            if (task) {
+                await supabaseAdapter.set(`tasks:${id}`, task);
+                tasksMigrated++;
+            }
+        }
+
+        // Migrate projects
+        const projectsIndex = localData['projects:index'] || [];
+        for (const id of projectsIndex) {
+            const project = localData[`projects:${id}`];
+            if (project) {
+                await supabaseAdapter.set(`projects:${id}`, project);
+                projectsMigrated++;
+            }
+        }
+
+        // Clear local storage data (except deviceId)
+        for (const key of Object.keys(localData)) {
+            if (key !== 'app:deviceId') {
+                await localAdapter.delete(key);
+            }
+        }
+
+        return {
+            assignmentsCount: assignmentsMigrated,
+            tasksCount: tasksMigrated,
+            projectsCount: projectsMigrated
+        };
     }
 };
