@@ -1,202 +1,128 @@
 # Assistant Manager (formerly Assignment Manager)
 
-A personal, offline-capable assignment and task management tool that uses a local or cloud LLM to **analyze, score, and prioritize** your work — without ever completing it for you.
+A personal, offline-capable assignment, task, and project management tool that uses a local or cloud LLM to **analyze, score, and prioritize** your work.
 
-Originally an assignment manager for students, the project is evolving into a dual-tier application supporting both Student and Professional workflows. Built with Svelte and Vite, it operates entirely in your browser and keeps your data local.
-
----
-
-## Features
-
-### 📋 Dashboard
-- Assignments/Tasks ranked by AI-computed **priority score** (highest priority first)
-- Stat bar showing: **Total**, **Due This Week**, **Overdue**, and **Completed** counts
-- Per-card summary: title, type tag, urgency label, difficulty score, estimated hours, checklist progress bar
-- Collapsible **Completed Assignments** section
-- Live **AI provider status indicator** (green = reachable, amber = offline/misconfigured)
-
-### ➕ Add Assignment — Three Input Modes
-
-| Mode | How it works |
-|---|---|
-| **Paste Text** | Paste the full prompt, instructions, or rubric and hit Analyze |
-| **Upload PDF** | Pick a PDF — text is extracted client-side via pdf.js, then analyzed |
-| **Manual Entry** | Fill in title, type, deadline, and optional description; AI analyzes if a description is provided |
-
-After analysis, a **preview card** is shown where you can edit any field before saving.
-
-### 🔍 AI Analysis — What Gets Generated
-
-For every assignment, the LLM outputs:
-
-- **Title** — extracted or inferred from the content
-- **Type** — Essay / Coding / Math / Research / Other
-- **Deadline** — extracted from text (editable before save)
-- **Difficulty score** (1–10) — calibrated to *your* skill profile, not an absolute scale
-- **Estimated hours** — with a one-sentence reasoning
-- **Priority score** (0–100) — computed from deadline, difficulty, your skills, and your chosen priority strategy
-- **Checklist** — 3–8 concrete, actionable subtasks
-
-### ⚡ Priority Boost
-On any assignment's detail view, you can apply a **boost** with a plain-language reason:
-
-> *"Prof mentioned this again in class today"* or *"This counts for 40% of my grade"*
-
-The LLM re-scores the priority with the reason factored in. Boosted cards show a badge on the dashboard. Boost can be removed at any time, which triggers a fresh baseline re-score.
-
-### 🔄 Re-analyze
-Manually re-run the AI analysis on any assignment from its detail view. Useful after:
-- Updating your Skills Profile in Settings
-- Feeling the original analysis was off
-
-Regenerates difficulty, time estimate, checklist, and priority score using fresh settings.
-
-### ✅ Checklist Tracking
-- Checkboxes on the detail view, progress bar on the dashboard card
-- Completing all items does **not** auto-mark as done — you decide when it's finished
-- Mark Done button on detail view (requires confirmation) moves the assignment to Completed
-
-### 🗑️ Lifecycle Management
-- **Mark Done** — archives the assignment to Completed section
-- **Delete** — permanently removes with a confirmation prompt
-- **Edit Deadline** — editable date picker on the detail view; re-sorts dashboard automatically
+Originally a student-focused assignment manager, the application has evolved into a **Dual-Tier Architecture** that supports both Student and Professional workflows. Built with Svelte 5 and Vite 8, it operates entirely in the browser and keeps all your data local.
 
 ---
 
-## Future Features (Roadmap)
+## 🔄 Dual-Tier Interface Modes
 
-We are currently transitioning the app into a **Dual-Tier Architecture** that supports both Student workflows (Assignments) and Professional workflows (Projects & Tasks). 
+You can switch between the two interface modes under **Settings**:
 
-### Professional Mode
-A local "Mode Toggle" in Settings will allow switching between the two interfaces:
+### 1. Student Mode (Assignment Focus)
+A streamlined interface tailored for student coursework, managing assignments, deadlines, and study priority strategies.
 
-- **Project-Based Organization:** Work will be organized into `Projects`, with `Tasks` belonging to projects. This data model shift supports professional workflows better than standalone assignments.
-- **Pro Dashboard:** A new dashboard (`ProDashboard.svelte`) tailored for professionals. It will group tasks by Project and highlight Blocked tasks and high-ROI (High Impact / Low Effort) tasks.
-- **AI Work Breakdown Structure (WBS) Generation:** A new Pro Add view (`ProAdd.svelte`) where pasting a "Client Brief" or feature request triggers the AI to generate a complete WBS (Epics -> Sub-tasks), complete with individual time estimates and impact scores.
-- **Advanced Tracking:**
-  - **Actual Time Tracking:** Inputs to track actual time spent vs. estimated time.
-  - **Blocker Tracking:** Mark tasks as blocked by other tasks. The AI and UI will dynamically down-prioritize blocked tasks until the blocker is resolved.
-  - **ROI Calculation:** The priority algorithm for professionals will heavily weigh the `impactScore` (1-10) against `estimatedHours` to surface high-ROI work automatically.
+### 2. Professional Mode (Project/Kanban Focus)
+A robust workspace tailored for professional project delivery:
+- **Project-Based Organization:** Tasks are grouped under specific projects (or kept in an inbox if unassigned).
+- **Kanban Board Dashboard:** Drag-style column layouts grouping tasks into *To Do*, *In Progress*, *Blocked*, and *Done*.
+- **AI Work Breakdown Structure (WBS) Generator:** Paste a client brief or feature request and let AI decompose it into granular sub-tasks with estimated hours and impact scores.
+- **ROI Priority Metric:** Tasks are ranked dynamically based on Return-on-Investment (Impact Score divided by Estimated Effort).
+- **Blocker Tracking:** Mark tasks as blocked and add blocker notes. The UI down-prioritizes blocked tasks and automatically changes their status.
+- **Actual Time Tracking:** Log actual hours spent against estimated hours with variance indicators.
 
 ---
 
-## Settings
+## 🎯 Key Features
 
-### Skills & Knowledge Profile
-Free-text description of your current abilities, e.g.:
-> *"Junior CS student, comfortable with Python, weak at calculus, decent at essay writing."*
+### 📋 Dashboard Layouts
+- **Student Dashboard:** Assignments sorted by priority score, with a progress checklist bar and status stats (*Active*, *Due This Week*, *Overdue*, *Completed*).
+- **Pro Dashboard:** Vertical columns for Kanban states, an inbox for unassigned tasks, and a collapsible **High-ROI Sidebar** highlighting the top 5 highest-yield items.
+- **Squish View Toggle:** Quickly toggle between detailed, information-rich cards and a compact, row-based view on the dashboard.
 
-The LLM uses this on every analysis call to calibrate difficulty and priority relative to **your** level.
+### ⚡ AI Analysis & Input Modes
+- **Add Assignment (Student):** Paste a prompt/rubric, upload a PDF (parsed locally via pdf.js), or enter details manually. AI generates calibrated difficulty, estimates, checklists, and priority.
+- **Add Project & WBS (Pro):** Paste client brief, review the WBS preview table (add, edit, or delete rows manually), then save.
+- **WBS Resilience:** Built-in validation, partial-save, and retry options to prevent losing drafted text if AI generation or parsing fails.
+- **Priority Boost:** Add context (e.g. *"This counts for 40% of my grade"*) to trigger an LLM-calculated score adjustment.
+- **Re-analyze:** Individually re-score and re-analyze any task from its detail view if settings or skills change.
 
-### Priority Preset
-Choose a base strategy:
-- **Deadline-first** — urgency always wins
-- **Difficulty-first** — tackle the hardest thing first
-- **Easiest-first** — quick wins to build momentum
-- **Balanced** — deadline and difficulty weighted equally
+### 🛡️ App Stability & UX Enhancements
+- **Undo Stack for Destructive Actions:** A single-level undo system for actions like deleting assignments/tasks or marking them completed. A floating, auto-dismissing notification toast (`UndoToast`) lets you restore items or revert state changes instantly.
+- **"Re-score All" Batch Re-analysis:** Button in Settings to batch re-score all active assignments/tasks using your updated skills profile and directives.
+- **JSON Data Backup & Restore:** Back up your entire workspace (profiles, assignments, tasks, and projects) to a local JSON file and restore it easily with safety confirmation prompts.
+- **Theme Selection:** Force Light or Dark mode, or stick to System Default, with settings persisted across browser sessions.
+- **Timezone/Calendar Precision:** Calibrated local date parsing preventing date offsets in the calendar view.
 
-Add an optional **Custom Rule** in plain language, e.g.:
-> *"Always prioritize CS assignments over humanities"*
+---
 
-The LLM interprets preset + custom rule together on each call.
+## ⚙️ Settings & Configuration
 
-### AI Provider
-Supports three backends — switch in Settings:
+### Context Profiling
+- **Skills & Knowledge Profile:** Describe your abilities (e.g., *"Proficient in Python, weak in Calculus"*) for AI to calibrate task difficulty and time estimates relative to you.
+- **Priority Presets (Student):** Choose a baseline sorting strategy (*Balanced*, *Deadline First*, *Easy First*, *Hard First*) and write optional custom plain-text sorting rules.
 
-| Provider | Config needed | Model examples |
+### AI Providers
+Assistant Manager supports five pluggable provider layers with active health check verification:
+
+| Provider | Config Needed | Model Examples |
 |---|---|---|
 | **Ollama** (default, local) | Base URL (default: `http://localhost:11434`) | `qwen2.5:14b`, `llama3.1:8b`, `phi4` |
-| **Anthropic** | API key (`sk-ant-…`) | `claude-sonnet-4-20250514`, `claude-opus-4-5` |
-| **OpenAI** | API key (`sk-…`) | `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo` |
-
-Use the **Test Connection** button to verify reachability before saving.
+| **Anthropic** | API key (`sk-ant-...`) | `claude-3-5-sonnet-20240620`, `claude-opus-20240229` |
+| **OpenAI** | API key (`sk-...`) | `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo` |
+| **Google Gemini** | API key (`AIzaSy...`) | `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-2.5-pro` |
+| **Groq** | API key (`gsk_...`) | `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `gemma2-9b-it` |
 
 ---
 
-## Getting Started
+## 🛠️ Tech Stack
+
+| Component | Technology |
+|---|---|
+| **UI Framework** | [Svelte 5](https://svelte.dev) |
+| **Build Tool** | [Vite 8](https://vite.dev) |
+| **Styling** | Vanilla CSS (pure styling tokens, responsive, dark/light themes) |
+| **Storage** | Browser `localStorage` with structured Schema Versioning & Migrations |
+| **PDF Parsing** | [pdf.js](https://mozilla.github.io/pdf.js/) (loaded on-demand) |
+| **Fonts** | Outfit + DM Sans via Google Fonts |
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js and npm installed
+- [Node.js](https://nodejs.org) (v18+) and npm installed.
 
 ### Running Locally
-
-1. Clone the repository and navigate into it.
-2. Install dependencies:
+1. Clone the repository and navigate to the project directory.
+2. Install the dependencies:
    ```bash
    npm install
    ```
-3. Start the Vite development server:
+3. Start the local development server:
    ```bash
    npm run dev
    ```
-4. Open the provided localhost URL in your browser.
+4. Open the localhost URL shown in your terminal.
 
-### AI Configuration
+### AI Setup
 
-**With Ollama (recommended — fully offline)**
-1. Install [Ollama](https://ollama.com) and pull a model:
+#### Using Ollama (Local & Offline)
+1. Install [Ollama](https://ollama.com).
+2. Download a model (e.g. `qwen2.5:14b`):
    ```bash
    ollama pull qwen2.5:14b
    ```
-2. In the app, go to **Settings** → confirm the base URL and model name → **Save**.
-3. The status dot in the header turns green when Ollama is reachable.
+3. Go to **Settings** in the app, verify the base URL and type the model name, then hit **Save**.
+4. The status indicator dot in the header will turn green once Ollama is reachable.
 
-**With Anthropic or OpenAI**
-1. Go to **Settings** → AI Provider → select your provider.
-2. Paste your API key and enter the model name.
-3. Save and start adding tasks.
-
-> **Note:** The PDF upload tab requires an internet connection to load the pdf.js parsing script on first use.
+#### Using Cloud Providers
+1. Go to **Settings** -> select your provider (Anthropic, OpenAI, Gemini, or Groq).
+2. Enter your API Key and the optional model name.
+3. Test the connection and save.
 
 ---
 
-## Tech Stack
+## 🔒 Data & Privacy (Threat Model)
 
-| Concern | Technology |
-|---|---|
-| UI Framework | [Svelte 5](https://svelte.dev) |
-| Build Tool | [Vite](https://vitejs.dev) |
-| Styling | Vanilla CSS (no Tailwind/Bootstrap) |
-| Storage | `localStorage` (persisted across sessions) |
-| Fonts | [Outfit](https://fonts.google.com/specimen/Outfit) + [DM Sans](https://fonts.google.com/specimen/DM+Sans) via Google Fonts |
-| PDF parsing | [pdf.js](https://mozilla.github.io/pdf.js/) (loaded on-demand) |
-| AI (local) | [Ollama](https://ollama.com) `/api/chat` |
-| AI (cloud) | Anthropic or OpenAI API |
-| Theme | Light + automatic dark mode via `prefers-color-scheme` |
-
-## Architecture & Refactoring
-
-### Project Structure
-The app is built as a Single Page Application using Svelte and organized under `src/`:
-- `lib/actions.js`: Centralized action router for UI events.
-- `lib/model.js`: Pure normalization for exact data shapes.
-- `lib/migrations.js`: Strict schema versioning updates logic.
-- `lib/storage.js`: LocalStorage adapter wrapping `init()` boundary.
-- `lib/stores.js`: Svelte writable and derived stores for state management.
-- `lib/llm/`: Pluggable AI engine layer (Ollama, Anthropic, OpenAI).
-- `views/` & `components/`: Granular Svelte components corresponding to exact views and UI elements.
-
-### Storage Migrations
-Data format changes are handled transparently via a `schemaVersion`. Any structural changes explicitly increment the version constant. On startup (`storage.init()`), the app securely reads the existing objects and patches legacy keys to ensure absolute UI stability, before rendering the main dashboard.
-
-### Data Model Structure
-- `app:schemaVersion`: Integer governing the migration level applied to the system.
-- `app:deviceId`: Stable persistent string identifying the local environment.
-- `profile`: Central user config (skills, AI keys, custom priority logic, app mode).
-- `assignments:index` & `projects:index`: Arrays of entity IDs.
-- `assignments:id` & `projects:id`: Core documents containing normalized outputs like difficulty, priority score, or status.
+- **Local Storage:** All app state is stored strictly in your browser's local cache. No databases or tracking scripts are used.
+- **Plaintext Keys:** API keys are stored in plaintext in `localStorage`. Only use this application on trusted, secure devices.
+- **No Completion:** The AI model is strictly used to evaluate and organize tasks. Your assignment details, briefs, and rubrics are sent via HTTPS or local boundaries, but are never completed for you.
 
 ---
 
-## Data & Privacy (Threat Model)
-
-- All data is stored locally in your browser's `localStorage`.
-- **API Keys**: When using cloud providers, keys are stored explicitly in plaintext within `localStorage`. Do not use this tool on a shared or un-trusted device. Avoid entering production keys with overly broad permissions; scope the keys strictly to LLM inference if possible.
-- The AI is **never** asked to complete assignments, and requests execute strictly over HTTPS or localhost boundaries.
-
----
-
-## Assignment Types & Color Coding
+## 🎨 Assignment Types & Color Coding
 
 | Type | Color |
 |---|---|
@@ -206,16 +132,16 @@ Data format changes are handled transparently via a `schemaVersion`. Any structu
 | Research | Teal |
 | Other | Gray |
 
-Difficulty badges: **1–3** green · **4–6** amber · **7–10** red
+*Difficulty Badges:* **1–3** (Green) · **4–6** (Amber) · **7–10** (Red)
 
 ---
 
-## Out of Scope
+## 🚫 Future Implementation Scope
 
-This is a personal, single-device tool. The following are intentionally not included:
-- User authentication / accounts
-- Multi-device sync
-- Push notifications or reminders
-- Calendar integration
-- Collaboration or sharing
-- Automatic re-analysis when settings change
+This is designed to be a personal, single-device offline tool. The following features can be implemented in the future:
+- User accounts / authentication
+- Cloud-hosted databases & multi-device synchronization
+- Desktop or push notifications
+- External calendar integration (Google Calendar, Outlook)
+- Collaborative workspace features
+- Automated background re-scoring (must be triggered manually via settings)
