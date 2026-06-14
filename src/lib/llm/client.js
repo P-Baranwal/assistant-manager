@@ -130,6 +130,128 @@ ${rawContent}
     return normalizeAnalysisResult(rawResponseText);
 }
 
+export async function generateWeeklyPlan(profile, activeItems) {
+    const plugin = getPlugin(profile);
+    const v = plugin.validate(profile);
+    if (!v.ok) throw new Error(`Provider invalid: ${v.message}`);
+
+    const CURRENT_DATE = new Date().toISOString().split('T')[0];
+    const AVAILABLE_HOURS = profile.availableHoursPerDay || 6;
+
+    const itemsSummary = activeItems.map(t => {
+        const effectiveScore = t.boost?.active ? t.boost.boostedPriorityScore : t.priorityScore;
+        return `- "${t.title}" (type: ${t.type || t.entityType || 'task'}, deadline: ${t.deadline || 'none'}, est: ${t.estimatedHours}h, priority: ${effectiveScore}, status: ${t.status})`;
+    }).join('\n');
+
+    const system = `
+You are a productive work-planning assistant. Given a list of active tasks/assignments with deadlines,
+generate a realistic day-by-day plan for the current week.
+
+Today is ${CURRENT_DATE}. The user has approximately ${AVAILABLE_HOURS} hours available per workday.
+
+## Rules
+- Distribute work realistically — do NOT overload any single day.
+- Respect deadlines: tasks due sooner get scheduled first.
+- Break large tasks (>3h) across multiple days when the deadline allows.
+- Consider priority scores — higher priority items get prime time slots (morning).
+- Include brief labels like "Morning", "Afternoon", or "Evening" for each block.
+- If tasks exceed the available hours, note which ones may need rescheduling.
+
+## Output
+Output ONLY a raw JSON array — no markdown, no fences, no preamble.
+Each day must match this shape:
+[
+  {
+    "day": "Monday",
+    "date": "YYYY-MM-DD",
+    "blocks": [
+      { "task": "Task title", "hours": 2, "slot": "Morning" }
+    ],
+    "totalHours": 5,
+    "note": "Optional note about the day's load"
+  }
+]
+
+Include only weekdays Mon–Fri. Skip today if it's past available hours.
+`.trim();
+
+    const user = `Active tasks:\n${itemsSummary || '(No active tasks)'}`;
+
+    const raw = await plugin.analyze({ system, user, profile, feature: 'weekly_plan' });
+
+    let parsed;
+    try {
+        const clean = raw.replace(/```(?:json)?\s*/g, '').replace(/```/g, '').trim();
+        const arr = JSON.parse(clean.match(/\[[\s\S]*\]/)?.[0] || clean);
+        if (!Array.isArray(arr)) throw new Error();
+        parsed = arr.map(day => ({
+            day: day.day || 'Unknown',
+            date: day.date || null,
+            blocks: Array.isArray(day.blocks) ? day.blocks.map(b => ({
+                task: b.task || 'Untitled',
+                hours: Math.max(0.25, parseFloat(b.hours) || 1),
+                slot: b.slot || 'Anytime'
+            })) : [],
+            totalHours: parseFloat(day.totalHours) || 0,
+            note: day.note || ''
+        }));
+    } catch {
+        throw new Error('Failed to parse weekly plan from AI response.');
+    }
+
+    return parsed;
+}
+
+export async function extractTaskFromText(text, profile) {
+    const plugin = getPlugin(profile);
+    const v = plugin.validate(profile);
+    if (!v.ok) throw new Error(`Provider invalid: ${v.message}`);
+
+    const CURRENT_DATE = new Date().toISOString().split('T')[0];
+
+    const system = `
+You are a task extraction assistant. Parse the user's natural language input and extract
+structured task data.
+
+Today's date: ${CURRENT_DATE}
+
+Output ONLY a raw JSON object — no markdown, no fences, no preamble.
+{
+  "title": "string",
+  "type": "Essay | Coding | Math | Research | Other",
+  "deadline": "YYYY-MM-DD or null",
+  "estimatedHours": number,
+  "weight": "string or null (e.g. '20% of grade')",
+  "notes": "string or null (extra context)"
+}
+
+Rules:
+- Infer a concise, descriptive title from the text.
+- If no deadline is mentioned, set deadline to null.
+- If no time estimate, set estimatedHours to null.
+- Be smart about parsing: "due Friday" means this coming Friday, "3 hours" means estimatedHours: 3.
+- If the input is too vague to extract meaningful data, return { "error": "true", "reason": "..." }.
+`.trim();
+
+    const user = text;
+
+    const raw = await plugin.analyze({ system, user, profile, feature: 'nl_extract' });
+
+    let parsed;
+    try {
+        const clean = raw.replace(/```(?:json)?\s*/g, '').replace(/```/g, '').trim();
+        parsed = JSON.parse(clean.match(/\{[\s\S]*\}/)?.[0] || clean);
+        if (parsed.error) throw new Error(parsed.reason || 'Could not extract task from text.');
+        if (!parsed.title) parsed.title = 'Untitled Task';
+        if (!['Essay', 'Coding', 'Math', 'Research', 'Other'].includes(parsed.type)) parsed.type = 'Other';
+    } catch (e) {
+        if (e.message.includes('Could not extract')) throw e;
+        throw new Error('Failed to parse task from text.');
+    }
+
+    return parsed;
+}
+
 export async function generateWBS(brief, profile) {
     const plugin = getPlugin(profile);
 

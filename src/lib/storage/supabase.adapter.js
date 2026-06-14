@@ -12,7 +12,7 @@ function camelToSnake(obj) {
     return n;
 }
 
-function snakeToCamel(obj) {
+export function snakeToCamel(obj) {
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
     const n = {};
     for (const k of Object.keys(obj)) {
@@ -82,20 +82,20 @@ export class SupabaseAdapter extends StorageAdapter {
                 return data.map(item => item.id);
             }
 
+            // Tasks index: include tasks from shared projects (RLS handles access)
             if (key === 'tasks:index') {
                 const { data, error } = await supabase
                     .from('tasks')
-                    .select('id')
-                    .eq('user_id', userId);
+                    .select('id');
                 if (error || !data) return [];
                 return data.map(item => item.id);
             }
 
+            // Projects index: include shared projects (RLS handles access)
             if (key === 'projects:index') {
                 const { data, error } = await supabase
                     .from('projects')
-                    .select('id')
-                    .eq('user_id', userId);
+                    .select('id');
                 if (error || !data) return [];
                 return data.map(item => item.id);
             }
@@ -118,7 +118,6 @@ export class SupabaseAdapter extends StorageAdapter {
                     .from('tasks')
                     .select('*')
                     .eq('id', id)
-                    .eq('user_id', userId)
                     .single();
                 if (error || !data) return null;
                 return snakeToCamel(data);
@@ -130,7 +129,6 @@ export class SupabaseAdapter extends StorageAdapter {
                     .from('projects')
                     .select('*')
                     .eq('id', id)
-                    .eq('user_id', userId)
                     .single();
                 if (error || !data) return null;
                 return snakeToCamel(data);
@@ -199,7 +197,7 @@ export class SupabaseAdapter extends StorageAdapter {
 
             if (key.startsWith('tasks:')) {
                 const rawVal = camelToSnake(value);
-                rawVal.user_id = userId;
+                if (!rawVal.user_id) rawVal.user_id = userId;
                 const { error } = await supabase
                     .from('tasks')
                     .upsert(rawVal);
@@ -209,7 +207,7 @@ export class SupabaseAdapter extends StorageAdapter {
 
             if (key.startsWith('projects:')) {
                 const rawVal = camelToSnake(value);
-                rawVal.user_id = userId;
+                if (!rawVal.user_id) rawVal.user_id = userId;
                 const { error } = await supabase
                     .from('projects')
                     .upsert(rawVal);
@@ -242,8 +240,7 @@ export class SupabaseAdapter extends StorageAdapter {
                 const { error } = await supabase
                     .from('tasks')
                     .delete()
-                    .eq('id', id)
-                    .eq('user_id', userId);
+                    .eq('id', id);
                 if (error) throw error;
                 return;
             }
@@ -253,8 +250,7 @@ export class SupabaseAdapter extends StorageAdapter {
                 const { error } = await supabase
                     .from('projects')
                     .delete()
-                    .eq('id', id)
-                    .eq('user_id', userId);
+                    .eq('id', id);
                 if (error) throw error;
                 return;
             }
@@ -292,11 +288,10 @@ export class SupabaseAdapter extends StorageAdapter {
                 });
             }
 
-            // Fetch tasks
+            // Fetch tasks (RLS handles access — includes shared project tasks)
             const { data: tasks } = await supabase
                 .from('tasks')
-                .select('*')
-                .eq('user_id', userId);
+                .select('*');
             if (tasks) {
                 result['tasks:index'] = tasks.map(t => t.id);
                 tasks.forEach(t => {
@@ -304,11 +299,10 @@ export class SupabaseAdapter extends StorageAdapter {
                 });
             }
 
-            // Fetch projects
+            // Fetch projects (RLS handles access — includes shared projects)
             const { data: projects } = await supabase
                 .from('projects')
-                .select('*')
-                .eq('user_id', userId);
+                .select('*');
             if (projects) {
                 result['projects:index'] = projects.map(p => p.id);
                 projects.forEach(p => {

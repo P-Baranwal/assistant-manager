@@ -5,6 +5,71 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.0.6]
+### Added
+- Smart AI Features (Phase 6): intelligent scheduling, risk alerts, natural language entry, weekly digest, and accuracy feedback.
+- Smart Scheduling: "Plan My Week" button on both Student and Pro dashboards generates an AI-optimized weekly schedule based on active tasks, deadlines, priorities, and available hours.
+- WeekPlan view component: displays day-by-day schedule with time blocks, slot icons (Morning/Afternoon/Evening), total hours, and overload indicators.
+- `generateWeeklyPlan(profile, activeItems)` function in `src/lib/llm/client.js` — calls AI to create realistic Mon–Fri work plans.
+- Deadline Risk Alerts: `RiskBanner` component shows dismissible overload warning when estimated hours for next 7 days exceed available capacity.
+- Risk detection computed client-side using `availableHoursPerDay` profile setting (default 6h/day) and tasks due within 7 days.
+- Natural Language Task Entry: `NaturalLanguageInput` component on both dashboards — type or paste natural language, AI extracts structured task data.
+- `extractTaskFromText(text, profile)` function in `src/lib/llm/client.js` — parses natural language into `{ title, type, deadline, estimatedHours, weight, notes }`.
+- NL input shows preview card with editable fields before saving, with Enter key to submit.
+- Weekly Digest Email: Supabase Edge Function (`weekly-digest`) generates and sends personalized weekly digest emails via Resend.
+- Digest function gathers top 5 priority tasks per user, generates AI summary, and sends formatted HTML email.
+- Requires `RESEND_API_KEY` and `RESEND_FROM` env vars; needs Supabase cron trigger for scheduling.
+- Accuracy Feedback Loop: completed tasks now show estimated vs actual hours comparison with variance percentage.
+- Student Detail view: time accuracy section with variance indicator on completed assignments.
+- ProDetail view: time accuracy section on completed tasks when both estimated and actual hours are logged.
+- AI Insights section in Settings: shows accuracy patterns across completed tasks (average variance, breakdown by task type).
+- Profile field `availableHoursPerDay` (default 6, range 1–16) for risk alerts and weekly plan generation.
+- Profile field `weeklyDigestOptIn` (default true) for email digest opt-out.
+- `weeklyPlan`, `riskAlertDismissed`, and `nlPreview` stores in `src/lib/stores.js`.
+- `WeekPlan.svelte` view routed as `'week-plan'` in both Student and Pro modes.
+- CSS styles for accuracy feedback, AI insights, risk banner, and NL input components.
+
+### Changed
+- `normalizeProfile` in `model.js` now includes `availableHoursPerDay` and `weeklyDigestOptIn` fields.
+- Student Dashboard now shows RiskBanner and NaturalLanguageInput at top of active tab, plus "Plan My Week" button in tab bar.
+- ProDashboard now shows RiskBanner, NaturalLanguageInput, and "Plan My Week" button in filter bar.
+- App.svelte imports and routes the new `WeekPlan` component for `'week-plan'` view.
+
+## [0.0.5]
+### Added
+- Collaboration (Phase 5): Team tier with shared projects, comments, activity feed, and real-time sync.
+- New Supabase migration (`00004_collaboration_schema.sql`): teams, team_members, team_invites, task_comments, activity_log, notifications tables with RLS policies and triggers.
+- Team service layer (`src/lib/teams.js`) with CRUD for teams, members, invites, shared projects, comments, activity, and notifications.
+- Real-time sync module (`src/lib/realtime.js`) using Supabase Realtime for shared tasks, projects, activity, and notifications.
+- Team management UI (`src/pro/views/TeamSettings.svelte`): create team, invite members by email, manage roles, shared skills profile, danger zone.
+- Kanban project filter bar: toggle between All Projects, My Projects, and Team Projects.
+- Activity feed panel in ProDashboard: shows recent task movements, creations, and updates for team shared projects.
+- Assignee avatars on Kanban cards: circular initials badges for tasks with `assigned_to`.
+- Comments section on ProDetail: threaded comment list with author avatars, timestamps, and @mention support.
+- Task assignment dropdown on ProDetail for shared projects: assign tasks to team members.
+- Share-with-team toggle on ProAdd: new projects can be shared with the team on creation.
+- Notification bell in ProHeader: shows unread count badge and dropdown with recent notifications.
+- Team invitation acceptance/decline in Settings: pending team invites card with Accept/Decline buttons.
+- Team Management card in Settings for Team tier users.
+- Notification styles, activity panel styles, assignee badge styles, and team role badges in `style.css`.
+
+### Changed
+- `SupabaseAdapter` now relies on RLS policies for project/task access control instead of client-side `user_id` filtering, enabling shared project visibility across team members.
+- `SupabaseAdapter` preserves original `user_id` on task/project updates to maintain ownership for shared resources.
+- `normalizeProfile` now includes `teamId` field.
+- `normalizeTask` now includes `assignedTo` and `userId` fields.
+- `normalizeProject` now includes `teamId`, `visibility`, and `userId` fields.
+- `SUBSCRIPTION_LIMITS` now includes `sharedProjects` flag (true only for Team tier).
+- `stores.js` exports new stores: `currentTeam`, `teamMembers`, `teamActivity`, `notifications`, `unreadNotifications`, `sharedProjects`, `privateProjects`.
+- `constants.js` exports `TEAM_ROLES` array.
+- `App.svelte` loads team data and subscribes to real-time when profile subscription is 'team'.
+- `App.svelte` routes to `team-settings` view.
+- `ProDashboard` supports project filtering, activity feed, and assignee avatars.
+- `ProDetail` includes comments section and task assignment for shared projects.
+- `ProAdd` includes share-with-team toggle when user has a team.
+- `ProHeader` includes notification bell with unread badge and dropdown.
+- `Settings` includes team management card and pending team invitations.
+
 ## [0.0.4]
 ### Added
 - Progressive Web App (Phase 4): Full PWA support for mobile and desktop users.

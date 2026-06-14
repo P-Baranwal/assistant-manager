@@ -273,6 +273,41 @@
                     {/if}
                 </div>
             {/if}
+
+            {#if detail.status === 'done' && detail.estimatedHours}
+                <div class="accuracy-feedback mt-4">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Time Accuracy</h3>
+                    {#if detail.actualHours > 0}
+                        {@const variance = ((detail.actualHours - detail.estimatedHours) / detail.estimatedHours * 100)}
+                        <div class="accuracy-comparison">
+                            <div class="accuracy-stat">
+                                <span class="accuracy-label">Estimated</span>
+                                <span class="accuracy-value">{detail.estimatedHours}h</span>
+                            </div>
+                            <div class="accuracy-arrow">→</div>
+                            <div class="accuracy-stat">
+                                <span class="accuracy-label">Actual</span>
+                                <span class="accuracy-value">{detail.actualHours}h</span>
+                            </div>
+                            <div class="accuracy-stat">
+                                <span class="accuracy-label">Variance</span>
+                                <span class="accuracy-value" style="color: {variance > 10 ? 'var(--danger)' : variance < -10 ? 'var(--success)' : 'var(--text-muted)'}">
+                                    {variance > 0 ? '+' : ''}{variance.toFixed(0)}%
+                                </span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-muted mt-2">You estimated {detail.estimatedHours}h, took {detail.actualHours}h ({variance > 0 ? '+' : ''}{variance.toFixed(0)}%)</p>
+                    {:else}
+                        <div class="form-group mb-0">
+                            <label class="text-sm" for="detail-actual-hours">Log actual hours spent:</label>
+                            <div class="flex gap-2 mt-1">
+                                <input id="detail-actual-hours" type="number" class="input" bind:value={detail.actualHours} min="0" step="0.25" placeholder="Hours" style="width: 100px;">
+                                <button class="btn btn-sm" on:click={commitUpdate}>Save</button>
+                            </div>
+                        </div>
+                    {/if}
+                </div>
+            {/if}
             
             <hr style="border:0; border-top:1px solid var(--border-color); margin: 1.5rem 0;">
             

@@ -1,14 +1,16 @@
 <script>
-    import { view, profile, projects, tasks } from '$lib/stores';
+    import { view, profile, projects, tasks, currentTeam } from '$lib/stores';
     import { storage } from '$lib/storage';
     import { generateWBS } from '$lib/llm/client';
     import { uuid } from '$lib/utils/id';
+    import { teamService } from '$lib/teams';
     import Spinner from '../../components/Spinner.svelte';
 
     // Project selection
     let selectedProjectId = $profile?.defaultProjectId || '';
     let newProjectTitle = '';
     let creatingNew = false;
+    let shareWithTeam = false;
 
     // Brief
     let briefText = '';
@@ -65,14 +67,26 @@
                     title: newProjectTitle.trim(),
                     clientContext: briefText.trim(),
                     status: 'active',
+                    visibility: shareWithTeam && $currentTeam ? 'shared' : 'private',
+                    teamId: shareWithTeam && $currentTeam ? $currentTeam.id : null,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
                 await storage.saveProject(newProject);
+
+                if (shareWithTeam && $currentTeam) {
+                    try {
+                        await teamService.shareProject(newProject.id, $currentTeam.id);
+                    } catch (err) {
+                        console.warn('Failed to share project:', err);
+                    }
+                }
+
                 projectId = newProject.id;
                 selectedProjectId = newProject.id;
                 creatingNew = false;
                 newProjectTitle = '';
+                shareWithTeam = false;
 
                 // Refresh projects store
                 const pIndex = await storage.getProjectIndex();
@@ -169,6 +183,15 @@
             {#if creatingNew}
                 <div class="form-group">
                     <input type="text" class="input" bind:value={newProjectTitle} placeholder="New project name...">
+                </div>
+            {/if}
+            {#if $currentTeam}
+                <div class="form-group mb-0">
+                    <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                        <input type="checkbox" bind:checked={shareWithTeam}>
+                        Share this project with team
+                    </label>
+                    <p class="text-xs text-muted mt-1">Shared projects are visible to all team members in their Pro Dashboard.</p>
                 </div>
             {/if}
         </div>

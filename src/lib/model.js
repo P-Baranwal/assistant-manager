@@ -13,7 +13,10 @@ export function normalizeProfile(p) {
         mode: TIERS.includes(p.mode) ? p.mode : 'student',
         subscription: SUBSCRIPTION_TIERS.includes(p.subscription) ? p.subscription : 'free',
         defaultProjectId: p.defaultProjectId || null,
-        useProxy: !!p.useProxy
+        useProxy: !!p.useProxy,
+        teamId: p.teamId || null,
+        availableHoursPerDay: Math.max(1, Math.min(16, parseInt(p.availableHoursPerDay) || 6)),
+        weeklyDigestOptIn: p.weeklyDigestOptIn !== undefined ? !!p.weeklyDigestOptIn : true
     };
 }
 
@@ -85,7 +88,11 @@ export function normalizeTask(t) {
         impactScore: t.impactScore
             ? Math.max(IMPACT.MIN, Math.min(IMPACT.MAX, parseInt(t.impactScore)))
             : null,
-        blockerNote: t.blockerNote || null
+        blockerNote: t.blockerNote || null,
+
+        // Collaboration fields
+        assignedTo: t.assignedTo || null,
+        userId: t.userId || null
     };
 
     // Calculate priority dynamically for pro tasks using ROI metric
@@ -108,6 +115,9 @@ export function normalizeProject(p) {
         title: p.title || 'Untitled Project',
         clientContext: p.clientContext || '',
         status: ['active', 'done'].includes(p.status) ? p.status : 'active',
+        teamId: p.teamId || null,
+        visibility: ['private', 'shared'].includes(p.visibility) ? p.visibility : 'private',
+        userId: p.userId || null,
         createdAt: p.createdAt || new Date().toISOString(),
         updatedAt: p.updatedAt || new Date().toISOString()
     };

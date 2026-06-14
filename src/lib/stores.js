@@ -90,3 +90,33 @@ export const highRoiTasks = derived(
     })
     .slice(0, 5)
 );
+
+// ── Collaboration / Team stores ──
+
+export const currentTeam = writable(null);       // { id, name, memberRole, teamSkillsProfile }
+export const teamMembers = writable([]);         // [{ userId, displayName, role, joinedAt }]
+export const teamActivity = writable([]);        // [{ id, action, entityTitle, userName, createdAt, ... }]
+export const notifications = writable([]);       // [{ id, title, body, read_at, ... }]
+
+export const unreadNotifications = derived(
+  notifications,
+  ($notifications) => $notifications.filter(n => !n.read_at).length
+);
+
+// Derived: shared projects (projects with visibility='shared' visible to user)
+export const sharedProjects = derived(
+  projects,
+  ($projects) => $projects.filter(p => p.visibility === 'shared')
+);
+
+// Derived: my private projects
+export const privateProjects = derived(
+  projects,
+  ($projects) => $projects.filter(p => p.visibility !== 'shared')
+);
+
+// ── Phase 6: Smart AI Features stores ──
+
+export const weeklyPlan = writable(null);          // Array of day objects from generateWeeklyPlan()
+export const riskAlertDismissed = writable(false);  // Whether user dismissed today's risk banner
+export const nlPreview = writable(null);           // Natural language extraction preview object

@@ -6,6 +6,7 @@
     import { supabase } from '$lib/supabase';
     import { SUBSCRIPTION_LIMITS, SUBSCRIPTION_LABELS } from '$lib/constants';
     import { canAccessFeature } from '$lib/billing';
+    import { teamService } from '$lib/teams';
     import ConfirmModal from '../../components/ConfirmModal.svelte';
 
     async function handleSignOut() {
@@ -68,14 +69,86 @@
     let importColor = 'var(--text-main)';
     let confirmConfig = { show: false, title: '', message: '', onConfirm: null };
 
+    // Team invite state
+    let teamInvites = [];
+    let teamLoading = false;
+
+    // AI Insights state
+    $: accuracyInsights = (() => {
+        const completed = [...$assignments, ...$tasks].filter(i => i.status === 'done' && i.estimatedHours > 0 && i.actualHours > 0);
+        if (completed.length < 3) return null;
+
+        let totalVariance = 0;
+        let byType = {};
+
+        for (const item of completed) {
+            const variance = ((item.actualHours - item.estimatedHours) / item.estimatedHours) * 100;
+            totalVariance += variance;
+            const type = item.type || item.entityType || 'task';
+            if (!byType[type]) byType[type] = { total: 0, count: 0, variance: 0 };
+            byType[type].total += item.actualHours;
+            byType[type].count++;
+            byType[type].variance += variance;
+        }
+
+        const avgVariance = totalVariance / completed.length;
+        const typeInsights = Object.entries(byType)
+            .filter(([, v]) => v.count >= 2)
+            .map(([type, v]) => ({
+                type,
+                count: v.count,
+                avgVariance: (v.variance / v.count).toFixed(0)
+            }))
+            .sort((a, b) => Math.abs(b.avgVariance) - Math.abs(a.avgVariance));
+
+        return {
+            totalTasks: completed.length,
+            avgVariance: avgVariance.toFixed(0),
+            typeInsights
+        };
+    })();
+
     $: canAccessProMode = p.subscription === 'pro' || p.subscription === 'team';
     $: canUseProxy = canAccessFeature(p.subscription || 'free', 'aiProxy');
+    $: canUseSharedProjects = canAccessFeature(p.subscription || 'free', 'sharedProjects');
     $: monthlyUsageRemainingText = (() => {
         if (!p.subscription) return '';
         const limits = SUBSCRIPTION_LIMITS[p.subscription] || SUBSCRIPTION_LIMITS.free;
         if (limits.aiMonthlyLimit === -1) return 'Unlimited';
         return `${limits.aiMonthlyLimit} analyses/month`;
     })();
+
+    async function loadTeamInvites() {
+        if ($authStore.isGuest) return;
+        teamLoading = true;
+        try {
+            teamInvites = await teamService.getMyPendingInvites();
+        } catch (err) {
+            console.warn('Failed to load team invites:', err);
+        }
+        teamLoading = false;
+    }
+
+    async function acceptTeamInvite(inviteId) {
+        try {
+            const teamId = await teamService.acceptInvite(inviteId);
+            p.teamId = teamId;
+            await storage.setProfile(p);
+            profile.set(p);
+            teamInvites = teamInvites.filter(i => i.id !== inviteId);
+        } catch (err) {
+            console.error('Failed to accept invite:', err);
+        }
+    }
+
+    async function declineTeamInvite(inviteId) {
+        try {
+            await teamService.declineInvite(inviteId);
+            teamInvites = teamInvites.filter(i => i.id !== inviteId);
+        } catch (err) {
+            console.error('Failed to decline invite:', err);
+        }
+    }
 
     async function testProvider() {
         testColor = 'var(--text-main)';
@@ -494,6 +567,45 @@
 </div>
 
 <div class="card mb-4 animate-fade">
+    <div class="card-title mb-4">Smart Planning</div>
+    <div class="form-group mb-0">
+        <label class="form-label" for="set-hours">Available Hours Per Day</label>
+        <input id="set-hours" type="number" class="input" bind:value={p.availableHoursPerDay} min="1" max="16" step="1" style="width: 100px;">
+        <p class="text-xs text-muted mt-2">Used for deadline risk alerts and weekly plan generation. Default: 6 hours.</p>
+    </div>
+</div>
+
+{#if accuracyInsights}
+    <div class="card mb-4 animate-fade">
+        <div class="card-title mb-4">AI Insights</div>
+        <p class="text-sm text-muted mb-3">Based on your last {accuracyInsights.totalTasks} completed tasks with time tracking.</p>
+        
+        <div class="insight-highlight mb-3">
+            {#if parseFloat(accuracyInsights.avgVariance) > 0}
+                You underestimate time by <strong>{accuracyInsights.avgVariance}%</strong> on average.
+            {:else if parseFloat(accuracyInsights.avgVariance) < 0}
+                You overestimate time by <strong>{Math.abs(accuracyInsights.avgVariance)}%</strong> on average.
+            {:else}
+                Your time estimates are remarkably accurate!
+            {/if}
+        </div>
+
+        {#if accuracyInsights.typeInsights.length > 0}
+            <div class="text-sm" style="font-weight: 500; margin-bottom: 0.5rem;">By task type:</div>
+            {#each accuracyInsights.typeInsights as insight}
+                <div class="insight-row">
+                    <span class="text-sm">{insight.type}</span>
+                    <span class="text-xs" style="color: {parseFloat(insight.avgVariance) > 0 ? 'var(--danger)' : parseFloat(insight.avgVariance) < 0 ? 'var(--success)' : 'var(--text-muted)'}">
+                        {parseFloat(insight.avgVariance) > 0 ? 'underestimates' : parseFloat(insight.avgVariance) < 0 ? 'overestimates' : 'on target'}
+                        by {Math.abs(insight.avgVariance)}% ({insight.count} tasks)
+                    </span>
+                </div>
+            {/each}
+        {/if}
+    </div>
+{/if}
+
+<div class="card mb-4 animate-fade">
     <div class="card-title mb-4">Data Management</div>
     <p class="text-sm text-muted mb-4">{#if !$authStore.isGuest}Your data is synced to the cloud. Use these tools to create a local backup or restore from one.{:else}All your data is stored locally in the browser. Use these tools to back up or restore your data.{/if}</p>
     
@@ -510,6 +622,32 @@
         <p class="text-sm mt-3" style="color: {importColor}; font-weight: 500;">{importMsg}</p>
     {/if}
 </div>
+
+{#if p.subscription === 'team'}
+    <div class="card mb-4 animate-fade">
+        <div class="card-title mb-4">Team Management</div>
+        <p class="text-sm text-muted mb-3">Manage your team, invite members, and configure shared projects.</p>
+        <button class="btn btn-primary" on:click={() => view.set('team-settings')}>Manage Team</button>
+    </div>
+{/if}
+
+{#if !$authStore.isGuest && !teamLoading && teamInvites.length > 0}
+    <div class="card mb-4 animate-fade" style="border-color: var(--primary)">
+        <div class="card-title mb-3">Team Invitations</div>
+        {#each teamInvites as invite}
+            <div class="team-invite-row">
+                <div>
+                    <p class="text-sm" style="font-weight:500">{invite.teamName}</p>
+                    <p class="text-xs text-muted">Invited as {invite.role}</p>
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn btn-sm btn-primary" on:click={() => acceptTeamInvite(invite.id)}>Accept</button>
+                    <button class="btn btn-sm" on:click={() => declineTeamInvite(invite.id)}>Decline</button>
+                </div>
+            </div>
+        {/each}
+    </div>
+{/if}
 
 <button class="btn btn-primary w-full justify-center mb-8" on:click={saveSettings} style="padding: 0.75rem;">
     Save Profiles & Preferences
@@ -546,6 +684,16 @@
         background: var(--bg-card);
         border: 1px dashed var(--border-color);
         border-radius: 8px;
+    }
+    .team-invite-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.625rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .team-invite-row:last-child {
+        border-bottom: none;
     }
     .badge {
         display: inline-block;

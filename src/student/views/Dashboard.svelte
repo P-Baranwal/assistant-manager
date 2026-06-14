@@ -1,6 +1,8 @@
 <script>
     import { priorityList, completedList, view, activeDetailId } from '$lib/stores';
     import { calculateUrgency, parseDateLocal } from '$lib/utils/date';
+    import RiskBanner from '../../components/RiskBanner.svelte';
+    import NaturalLanguageInput from '../../components/NaturalLanguageInput.svelte';
     
     let currentTab = 'active'; // 'active' or 'completed'
     let squished = false;
@@ -46,6 +48,8 @@
     }
 </script>
 
+<RiskBanner />
+
 <div class="tabs-container mb-4" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color);">
     <div class="tabs" role="tablist" style="border-bottom: none; margin-bottom: 0;">
         <div class="tab {currentTab === 'active' ? 'active' : ''}" 
@@ -61,13 +65,20 @@
             Completed ({$completedList.length})
         </div>
     </div>
-    <button class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.75rem; margin-bottom: 0.5rem;" on:click={() => squished = !squished}>
-        <svg class="svg-icon" style="width:14px;height:14px;" viewBox="0 0 24 24"><path d="M4 18h16c.55 0 1-.45 1-1s-.45-1-1-1H4c-.55 0-1 .45-1 1s.45 1 1 1zm0-5h16c.55 0 1-.45 1-1s-.45-1-1-1H4c-.55 0-1 .45-1 1s.45 1 1 1zM3 7c0 .55.45 1 1 1h16c.55 0 1-.45 1-1s-.45-1-1-1H4c-.55 0-1 .45-1 1z"/></svg>
-        {squished ? 'Expand' : 'Squish'}
-    </button>
+    <div class="flex gap-2 items-center">
+        <button class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;" on:click={() => view.set('week-plan')} title="AI-generated weekly schedule">
+            <svg class="svg-icon" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/></svg>
+            Plan My Week
+        </button>
+        <button class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.75rem; margin-bottom: 0.5rem;" on:click={() => squished = !squished}>
+            <svg class="svg-icon" style="width:14px;height:14px;" viewBox="0 0 24 24"><path d="M4 18h16c.55 0 1-.45 1-1s-.45-1-1-1H4c-.55 0-1 .45-1 1s.45 1 1 1zm0-5h16c.55 0 1-.45 1-1s-.45-1-1-1H4c-.55 0-1 .45-1 1s.45 1 1 1zM3 7c0 .55.45 1 1 1h16c.55 0 1-.45 1-1s-.45-1-1-1H4c-.55 0-1 .45-1 1z"/></svg>
+            {squished ? 'Expand' : 'Squish'}
+        </button>
+    </div>
 </div>
 
 {#if currentTab === 'active'}
+    <NaturalLanguageInput />
     {#if $priorityList.length === 0}
         <div class="empty-state">
             <svg class="svg-icon" style="width:48px;height:48px;margin:0 auto 1rem;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14h-2v-4H6v-2h4V7h2v4h4v2h-4v4z"/></svg>

@@ -7,13 +7,15 @@ export const ENTITY_TYPES = ['assignment', 'task', 'project'];
 
 export const TIERS = ['student', 'professional'];
 
+export const TEAM_ROLES = ['owner', 'admin', 'member'];
+
 export const SUBSCRIPTION_TIERS = ['free', 'student', 'pro', 'team'];
 
 export const SUBSCRIPTION_LIMITS = {
-    free:    { maxItems: 50,  aiMonthlyLimit: 10,  modes: ['student'], wbsGenerator: false, aiProxy: false },
-    student: { maxItems: -1,  aiMonthlyLimit: 100, modes: ['student'], wbsGenerator: false, aiProxy: true  },
-    pro:     { maxItems: -1,  aiMonthlyLimit: -1,  modes: ['student', 'professional'], wbsGenerator: true,  aiProxy: true  },
-    team:    { maxItems: -1,  aiMonthlyLimit: -1,  modes: ['student', 'professional'], wbsGenerator: true,  aiProxy: true  },
+    free:    { maxItems: 50,  aiMonthlyLimit: 10,  modes: ['student'], wbsGenerator: false, aiProxy: false, sharedProjects: false },
+    student: { maxItems: -1,  aiMonthlyLimit: 100, modes: ['student'], wbsGenerator: false, aiProxy: true,  sharedProjects: false },
+    pro:     { maxItems: -1,  aiMonthlyLimit: -1,  modes: ['student', 'professional'], wbsGenerator: true,  aiProxy: true,  sharedProjects: false },
+    team:    { maxItems: -1,  aiMonthlyLimit: -1,  modes: ['student', 'professional'], wbsGenerator: true,  aiProxy: true,  sharedProjects: true  },
 };
 
 export const SUBSCRIPTION_LABELS = {

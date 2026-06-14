@@ -2,8 +2,10 @@
     import { onMount, onDestroy } from 'svelte';
     import { storage } from '$lib/storage';
     import { fetchHealth } from '$lib/llm/client';
-    import { view, profile, providerReachable, assignments, tasks, projects, theme, authStore } from '$lib/stores';
+    import { view, profile, providerReachable, assignments, tasks, projects, theme, authStore, currentTeam, teamMembers, notifications } from '$lib/stores';
     import { supabase } from '$lib/supabase';
+    import { teamService } from '$lib/teams';
+    import { subscribeToTeam, unsubscribe as unsubscribeRealtime } from '$lib/realtime';
 
     // Student views
     import StudentHeader from './student/components/StudentHeader.svelte';
@@ -25,6 +27,8 @@
     import ProDashboard from './pro/views/ProDashboard.svelte';
     import ProAdd from './pro/views/ProAdd.svelte';
     import ProDetail from './pro/views/ProDetail.svelte';
+    import TeamSettings from './pro/views/TeamSettings.svelte';
+    import WeekPlan from './pro/views/WeekPlan.svelte';
 
     let isInitializing = true;
     let globalSpinner = { show: false, text: 'Processing...' };
@@ -54,6 +58,27 @@
             const pPromises = pIndex.map(id => storage.getProject(id));
             const allProjects = (await Promise.all(pPromises)).filter(Boolean);
             projects.set(allProjects);
+
+            // 4. Load Team data if Team subscription
+            if (p.subscription === 'team') {
+                try {
+                    const teams = await teamService.getMyTeams();
+                    if (teams.length > 0) {
+                        currentTeam.set(teams[0]);
+                        const members = await teamService.getTeamMembers(teams[0].id);
+                        teamMembers.set(members);
+                        subscribeToTeam(teams[0].id);
+                    }
+                    const notifs = await teamService.getNotifications();
+                    notifications.set(notifs);
+                } catch (err) {
+                    console.warn('Failed to load team data:', err);
+                }
+            } else {
+                currentTeam.set(null);
+                teamMembers.set([]);
+                unsubscribeRealtime();
+            }
         } catch (err) {
             console.error("loadData error:", err);
         } finally {
@@ -99,6 +124,7 @@
         if (authSubscription) {
             authSubscription.unsubscribe();
         }
+        unsubscribeRealtime();
     });
 
     $: {
@@ -144,6 +170,10 @@
             <ProDetail />
         {:else if $view === 'settings'}
             <Settings />
+        {:else if $view === 'team-settings'}
+            <TeamSettings />
+        {:else if $view === 'week-plan'}
+            <WeekPlan />
         {/if}
     </main>
 {:else}
@@ -170,6 +200,10 @@
             <TaskManager />
         {:else if $view === 'calendar'}
             <Calendar />
+        {:else if $view === 'team-settings'}
+            <TeamSettings />
+        {:else if $view === 'week-plan'}
+            <WeekPlan />
         {/if}
     </main>
 {/if}

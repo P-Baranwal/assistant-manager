@@ -3,7 +3,7 @@
 # Clerify — Project Memory
 
 > Generated snapshot for LLM context. The codebase is a Svelte 5 + Supabase SaaS app,
-> currently at **Phase 3 complete** of the 10-phase `saas-conversion-plan.md`.
+> currently at **Phase 6 complete** of the 10-phase `saas-conversion-plan.md`.
 
 ---
 
@@ -13,7 +13,7 @@
 |---|---|
 | **App name** | Clerify (rebranded from "Assistant Manager") |
 | **Original purpose** | Personal offline task/assignment manager with local LLM analysis |
-| **Current state** | SaaS conversion in progress; Phases 0–3 shipped |
+| **Current state** | SaaS conversion in progress; Phases 0–6 shipped |
 | **Entry point** | `index.html` → `src/main.js` → `src/App.svelte` |
 | **App title in HTML** | Still "Assignment Manager" — needs updating to Clerify |
 
@@ -72,15 +72,17 @@
 │   │
 │   ├── lib/
 │   │   ├── supabase.js                # createClient() export
-│   │   ├── stores.js                  # All Svelte writable/derived stores (inc. PWA stores)
+│   │   ├── stores.js                  # All Svelte writable/derived stores (inc. PWA + team stores)
 │   │   ├── storage.js                 # Storage facade (proxy to active adapter, offline queue)
 │   │   ├── model.js                   # normalizeProfile/Assignment/Task/Project
 │   │   ├── migrations.js              # Schema migration runner (v1–v4)
-│   │   ├── constants.js               # TYPES, STATUS, SUBSCRIPTION_*, STORAGE_KEYS
+│   │   ├── constants.js               # TYPES, STATUS, SUBSCRIPTION_*, STORAGE_KEYS, TEAM_ROLES
 │   │   ├── billing.js                 # canCreateItem, canUseAI, canAccessFeature
 │   │   ├── undoStack.js               # Single-level undo store
 │   │   ├── pwa.js                     # PWA initialization, install prompt, iOS detection
 │   │   ├── offlineQueue.js            # IndexedDB-based offline mutation queue
+│   │   ├── teams.js                   # Team service layer (CRUD, invites, comments, activity)
+│   │   ├── realtime.js                # Supabase Realtime subscriptions for shared data
 │   │   │
 │   │   ├── storage/
 │   │   │   ├── adapter.js             # Base StorageAdapter class (interface)
@@ -110,7 +112,10 @@
 │   │   ├── UndoToast.svelte
 │   │   ├── UpgradeBanner.svelte       # Inline upgrade prompt strip
 │   │   ├── UpgradeGate.svelte         # Full-panel feature lock UI
-│   │   └── InstallBanner.svelte       # PWA install prompt banner
+│   │   ├── InstallBanner.svelte       # PWA install prompt banner
+│   │   ├── RiskBanner.svelte          # Overload detection alert banner
+│   │   ├── NaturalLanguageInput.svelte # Quick NL task entry bar
+│   │   └── WeekPlan.svelte           # AI-generated weekly schedule view
 │   │
 │   ├── routes/
 │   │   ├── auth/
@@ -131,15 +136,21 @@
 │   │
 │   └── pro/
 │       ├── components/
-│       │   └── ProHeader.svelte       # Stats bar + nav (Projects/Blocked/ROI)
+│       │   └── ProHeader.svelte       # Stats bar + nav (Projects/Blocked/ROI/Team/Notifications)
 │       └── views/
-│           ├── ProDashboard.svelte    # Kanban board (todo/in_progress/blocked/done) + ROI sidebar
-│           ├── ProAdd.svelte          # New project + AI WBS generator
-│           └── ProDetail.svelte       # Task detail (impact/hours/blocker/variance)
+│           ├── ProDashboard.svelte    # Kanban board (todo/in_progress/blocked/done) + ROI sidebar + activity feed
+│           ├── ProAdd.svelte          # New project + AI WBS generator + share-with-team
+│           ├── ProDetail.svelte       # Task detail (impact/hours/blocker/variance) + comments + assignee
+│           ├── TeamSettings.svelte    # Team management (create/invite/members/skills)
+│           └── WeekPlan.svelte        # AI-generated weekly schedule view
 │
 ├── supabase/
 │   ├── functions/
 │   │   ├── create-checkout-session/index.ts
+│   │   ├── create-portal-session/index.ts
+│   │   ├── stripe-webhook/index.ts
+│   │   ├── ai-proxy/index.ts
+│   │   └── weekly-digest/index.ts    # Scheduled email digest (Phase 6)
 │   │   ├── create-portal-session/index.ts
 │   │   └── stripe-webhook/index.ts
 │   └── migrations/
@@ -239,7 +250,11 @@ All models are normalized by functions in `src/lib/model.js`.
   apiKey: string,              // BYOK; stored encrypted in Supabase
   mode: string,                // 'student'|'professional'  ← UI mode
   subscription: string,        // 'free'|'student'|'pro'|'team'  ← billing tier
-  defaultProjectId: string|null
+  defaultProjectId: string|null,
+  useProxy: boolean,              // true = route AI through proxy, false = BYOK direct
+  teamId: string|null,
+  availableHoursPerDay: number,   // default 6; used for risk alerts & weekly plan
+  weeklyDigestOptIn: boolean      // default true; email digest opt-in
 }
 ```
 
@@ -282,11 +297,11 @@ All models are normalized by functions in `src/lib/model.js`.
   actualHours,
   estimatedHours,
   impactScore: 1–10|null,
-  blockerNote: string|null
+  blockerNote: string|null,
+  assignedTo: uuid|null,  // team member user_id
+  userId: uuid            // original creator
 }
 ```
-
-Priority for tasks is **dynamically computed** in `normalizeTask()` using ROI when `impactScore` is set. Otherwise falls back to stored `priorityScore`.
 
 ### 5.4 Project
 ```js
@@ -296,7 +311,51 @@ Priority for tasks is **dynamically computed** in `normalizeTask()` using ROI wh
   title,
   clientContext,   // raw brief pasted for WBS generation
   status,          // 'active'|'done'
+  teamId: uuid|null,       // team this project is shared with
+  visibility: 'private'|'shared',
+  userId: uuid,            // original creator
   createdAt, updatedAt
+}
+```
+
+### 5.5 Team
+```js
+{
+  id: uuid,
+  name: string,
+  ownerId: uuid,           // team creator
+  teamSkillsProfile: string,
+  memberRole: 'owner'|'admin'|'member',  // current user's role
+  createdAt, updatedAt
+}
+```
+
+### 5.6 Task Comment
+```js
+{
+  id: uuid,
+  taskId: uuid,
+  userId: uuid,
+  parentId: uuid|null,     // for threading (not used in V1 UI)
+  body: string,
+  authorName: string,      // resolved from profiles
+  createdAt, updatedAt
+}
+```
+
+### 5.7 Activity Log
+```js
+{
+  id: uuid,
+  teamId: uuid,
+  userId: uuid,
+  userName: string,        // resolved from profiles
+  action: string,          // 'task.created'|'task.moved'|'task.updated'|'task.deleted'
+  entityType: string,      // 'task'
+  entityId: uuid,
+  entityTitle: string,
+  metadata: jsonb,         // e.g. { old_status, new_status }
+  createdAt
 }
 ```
 
@@ -319,6 +378,8 @@ Priority for tasks is **dynamically computed** in `normalizeTask()` using ROI wh
 
 The `SupabaseAdapter` ignores writes to `*:index` keys (they're computed from relational queries). It also strips billing-controlled fields from profile writes: `subscription`, `subscriptionStatus`, `stripeSubscriptionId`, `stripeCustomerId`, `currentPeriodEnd`.
 
+For shared projects/tasks, the adapter relies on RLS policies for access control instead of client-side `user_id` filtering. The `user_id` field is preserved on updates to maintain original ownership.
+
 **camelCase ↔ snake_case**: `SupabaseAdapter` converts JS camelCase to Postgres snake_case automatically via `camelToSnake()` / `snakeToCamel()` helpers.
 
 ---
@@ -337,12 +398,22 @@ The `SupabaseAdapter` ignores writes to `*:index` keys (they're computed from re
 | `assignments` | writable | All assignment objects array |
 | `tasks` | writable | All task objects array |
 | `projects` | writable | All project objects array |
+| `currentTeam` | writable | Currently selected team `{ id, name, memberRole }` |
+| `teamMembers` | writable | Members of current team `[{ userId, displayName, role }]` |
+| `teamActivity` | writable | Activity feed for current team `[{ action, entityTitle, userName }]` |
+| `notifications` | writable | User's notifications array |
 | `priorityList` | derived | Active assignments+tasks sorted by effective score |
 | `completedList` | derived | Done items sorted by updatedAt desc |
 | `tasksByProject` | derived | `{ [projectId]: { project, tasks[] } }` |
 | `unassignedTasks` | derived | Active tasks with no projectId |
 | `blockedTasks` | derived | Tasks with status 'blocked' |
 | `highRoiTasks` | derived | Top 5 tasks by ROI score |
+| `unreadNotifications` | derived | Count of unread notifications |
+| `sharedProjects` | derived | Projects with `visibility='shared'` |
+| `privateProjects` | derived | Projects without shared visibility |
+| `weeklyPlan` | writable | Array of day objects from `generateWeeklyPlan()` |
+| `riskAlertDismissed` | writable | Whether user dismissed today's risk banner |
+| `nlPreview` | writable | Natural language extraction preview object |
 
 ---
 
@@ -362,6 +433,8 @@ export async function analyze({ system, user, profile })  // → raw string (mod
 - **`fetchHealth(profile)`** — runs provider health check, updates `providerReachable` store
 - **`analyzeAssignment(rawContent, profile, boostReason?, existingContext?)`** — full assignment analysis; returns normalized object with difficulty/hours/priority/checklist
 - **`generateWBS(brief, profile)`** — generates Work Breakdown Structure for Pro mode; returns `[{ title, estimatedHours, impactScore }]`
+- **`generateWeeklyPlan(profile, activeItems)`** — generates a day-by-day work plan for the current week; returns `[{ day, date, blocks: [{ task, hours, slot }], totalHours, note }]`
+- **`extractTaskFromText(text, profile)`** — extracts structured task data from natural language input; returns `{ title, type, deadline, estimatedHours, weight, notes }`
 
 ### 8.3 Anthropic Provider Note
 
@@ -475,6 +548,7 @@ created_at, updated_at, analyzed_at
 id uuid PK, user_id, project_id → projects, title, description, status
 priority_score, priority_reasoning, boost jsonb, deadline date
 actual_hours, estimated_hours, impact_score int(1-10), blocker_note
+assigned_to uuid → auth.users(id)
 created_at, updated_at
 ```
 
@@ -484,9 +558,52 @@ id uuid PK, user_id, feature text, model text
 input_tokens int, output_tokens int, created_at
 ```
 
+**`teams`**
+```sql
+id uuid PK, name text, owner_id uuid → auth.users
+team_skills_profile text, created_at, updated_at
+```
+
+**`team_members`**
+```sql
+team_id uuid → teams(id), user_id uuid → auth.users(id)
+role text CHECK ('owner'|'admin'|'member'), joined_at
+PRIMARY KEY (team_id, user_id)
+```
+
+**`team_invites`**
+```sql
+id uuid PK, team_id uuid → teams(id), email text
+role text, invited_by uuid → auth.users(id)
+accepted_at timestamptz, created_at
+UNIQUE (team_id, email)
+```
+
+**`task_comments`**
+```sql
+id uuid PK, task_id uuid → tasks(id), user_id uuid → auth.users(id)
+parent_id uuid → task_comments(id), body text
+created_at, updated_at
+```
+
+**`activity_log`**
+```sql
+id uuid PK, team_id uuid → teams(id), user_id uuid → auth.users(id)
+action text, entity_type text, entity_id uuid, entity_title text
+metadata jsonb, created_at
+```
+
+**`notifications`**
+```sql
+id uuid PK, user_id uuid → auth.users(id)
+type text, title text, body text
+entity_type text, entity_id uuid
+read_at timestamptz, created_at
+```
+
 ### RLS Policies
 
-All tables have RLS enabled. Each table has a single "all operations" policy: `auth.uid() = user_id` (or `auth.uid() = id` for profiles).
+All tables have RLS enabled. Each table has a single "all operations" policy: `auth.uid() = user_id` (or `auth.uid() = id` for profiles). Team-aware policies on `projects`, `tasks`, and `task_comments` grant access to shared resources for team members via `get_user_team_ids()` helper function.
 
 ### Key Postgres Functions/RPCs
 
@@ -590,8 +707,8 @@ Dark mode: applied via `[data-theme='dark']` attribute on `<html>` OR `@media (p
 | 2 | Billing & Tier Enforcement | ✅ Complete |
 | 3 | AI Proxy Layer | ✅ Complete |
 | 4 | PWA | ✅ Complete |
-| 5 | Collaboration (Team) | ⏳ Not started |
-| 6 | Smart AI Features | ⏳ Not started |
+| 5 | Collaboration (Team) | ✅ Complete |
+| 6 | Smart AI Features | ✅ Complete |
 | 7 | Analytics | ⏳ Not started |
 | 8 | Browser Extension | ⏳ Not started |
 | 9 | Calendar Sync (iCal) | ⏳ Not started |
@@ -611,7 +728,8 @@ Dark mode: applied via `[data-theme='dark']` attribute on `<html>` OR `@media (p
 8. **`app.encryption_secret`** Postgres config var must be set in production for real BYOK encryption (dev fallback stores keys unencrypted)
 9. **`src/lib/storage.js`** imports `authStore` from `'./stores.js'` — circular dependency risk; works currently due to JS module evaluation order but should be monitored
 10. **Supabase `app:schemaVersion` key** — the `SupabaseAdapter.get()` returns `null` for unknown keys, so schema version tracking still effectively runs only against localStorage for guests; cloud users always re-run migration checks harmlessly
-11. **Migration 00003** (`use_proxy` column) must be applied to Supabase before proxy features work
+11. **Weekly digest Edge Function** requires `RESEND_API_KEY` and `RESEND_FROM` env vars for email delivery; also requires a Supabase cron trigger to be configured
+12. **`weekly-digest` Edge Function** needs the user's email resolved from `auth.users` — currently the `to` field uses `profile.id` which must be mapped to email via a Supabase join or separate query
 
 ---
 
@@ -627,16 +745,13 @@ Dark mode: applied via `[data-theme='dark']` attribute on `<html>` OR `@media (p
 
 ---
 
-## 19. Next Steps (Phase 5 — Collaboration)
+## 19. Next Steps (Phase 7 — Productivity Analytics)
 
 The next phase to implement per `saas-conversion-plan.md`:
 
-1. Add team management tables (teams, team_members)
-2. Implement team invitation flow via email
-3. Add shared projects visibility
-4. Implement real-time sync with Supabase Realtime
-5. Add task comments and activity feed
-6. Implement team skills profile
+1. Personal Dashboard Stats (velocity, time accuracy, streaks)
+2. Team Analytics (team velocity, workload distribution, blocker trends)
+3. Data Export (CSV, PDF report)
 
 ---
 
