@@ -4,12 +4,14 @@ import { normalizeProfile, normalizeAssignment, normalizeTask, normalizeProject 
 import { uuid } from './utils/id.js';
 import { LocalAdapter } from './storage/local.adapter.js';
 import { SupabaseAdapter } from './storage/supabase.adapter.js';
-import { authStore } from './stores.js';
+import { authStore, isOnline } from './stores.js';
+import { enqueueMutation, processQueue } from './offlineQueue.js';
 
 const localAdapter = new LocalAdapter();
 const supabaseAdapter = new SupabaseAdapter();
 
 let activeAdapter = localAdapter;
+let offlineQueueProcessing = false;
 
 // Listen to authState changes to dynamically swap adapters
 authStore.subscribe(state => {
@@ -20,10 +22,35 @@ authStore.subscribe(state => {
     }
 });
 
+// Process offline queue when coming back online
+isOnline.subscribe(async (online) => {
+    if (online && !offlineQueueProcessing && activeAdapter === supabaseAdapter) {
+        offlineQueueProcessing = true;
+        try {
+            const result = await processQueue(supabaseAdapter);
+            if (result.processed > 0) {
+                console.log(`Processed ${result.processed} offline mutations`);
+            }
+        } catch (err) {
+            console.error('Failed to process offline queue:', err);
+        } finally {
+            offlineQueueProcessing = false;
+        }
+    }
+});
+
 // Export a proxy object so existing references to `adapter` route dynamically
+// For cloud adapter, queue mutations when offline
 export const adapter = new Proxy({}, {
     get(target, prop) {
-        return (...args) => activeAdapter[prop](...args);
+        return (...args) => {
+            // For write operations on cloud adapter when offline, queue instead
+            if (activeAdapter === supabaseAdapter && !navigator.onLine && (prop === 'set' || prop === 'delete')) {
+                const [key, value] = args;
+                return enqueueMutation({ type: prop, key, value });
+            }
+            return activeAdapter[prop](...args);
+        };
     }
 });
 

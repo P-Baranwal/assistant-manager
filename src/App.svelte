@@ -10,6 +10,7 @@
     import Spinner from './components/Spinner.svelte';
     import ConfirmModal from './components/ConfirmModal.svelte';
     import UndoToast from './components/UndoToast.svelte';
+    import InstallBanner from './components/InstallBanner.svelte';
     import Dashboard from './student/views/Dashboard.svelte';
     import Add from './student/views/Add.svelte';
     import Detail from './student/views/Detail.svelte';
@@ -181,6 +182,7 @@
     onConfirm={confirmModal.onConfirm} 
     onCancel={confirmModal.onCancel} />
 <UndoToast />
+<InstallBanner />
 
 <style>
     .fade-in {

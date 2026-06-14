@@ -147,6 +147,26 @@ header {
 .status-dot.green { background-color: var(--success); }
 .status-dot.amber { background-color: var(--diff-med); }
 
+.offline-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(249, 115, 22, 0.12);
+    color: var(--diff-med);
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius);
+    font-size: 0.75rem;
+    font-weight: 500;
+    animation: pulse 2s infinite;
+}
+.offline-badge .svg-icon {
+    fill: currentColor;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
 .btn {
     background-color: var(--surface-color); color: var(--text-main);
     border: 1px solid var(--border-color); padding: 0.5rem 1rem;

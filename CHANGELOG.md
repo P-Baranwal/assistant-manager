@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+
+## [0.0.4]
+### Added
+- Progressive Web App (Phase 4): Full PWA support for mobile and desktop users.
+- PWA manifest (`public/manifest.json`) with app icons at all required sizes (72-512px).
+- Service worker via `vite-plugin-pwa` with Workbox caching strategies.
+- Cache-first for static assets, network-first for Supabase API calls.
+- Offline state detection via `isOnline` Svelte store (`online`/`offline` events).
+- Subtle offline indicator badge in header when disconnected from network.
+- IndexedDB-based offline write queue for mutations when offline.
+- Automatic queue flush when connectivity is restored (last-write-wins for V1).
+- "Add to Home Screen" install prompt after 3+ visits (Android/Chrome).
+- iOS Safari manual install instruction banner (Share → Add to Home Screen).
+- Install banner component with dismiss functionality (persists dismissal).
+- PWA meta tags in `index.html` (theme-color, apple-mobile-web-app, viewport-fit).
+- Background sync for offline mutations when user reconnects.
+
+### Changed
+- Renamed `index.html` title from "Assignment Manager" to "Clerify".
+- Updated `vite.config.js` with VitePWA plugin configuration.
+- `stores.js` now includes PWA-related stores (`isOnline`, `deferredPrompt`, `canInstall`, `showInstallBanner`, `showIOSInstructions`).
+- `main.js` initializes PWA features on app load.
+- `storage.js` now queues mutations to IndexedDB when offline and flushes on reconnect.
+- StudentHeader and ProHeader components show offline badge when `!$isOnline`.
+- Added `offline-badge` CSS class with pulse animation for offline indicator.
+
+### Fixed
+- App can now be installed as a PWA on mobile devices for native-like experience.
+- Data persists and syncs when users go offline and reconnect.
+- Clear visual feedback when app is in offline mode.
+
+## [0.0.3]
 ### Added
 - AI Proxy Layer (Phase 3): Supabase Edge Function (`ai-proxy`) that proxies LLM requests with JWT auth, subscription checks, and usage tracking.
 - Proxy supports Groq, Anthropic, OpenAI, and Google Gemini providers via server-side API keys.
@@ -18,6 +50,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `client.js` now routes through proxy when `profile.useProxy` is true, otherwise uses direct provider.
 - `normalizeProfile` in `model.js` includes `useProxy` field.
 - AI error messages in Add view now display the actual error text (useful for limit messages).
+
+## [0.0.2]
+### Added
 - Billing & Tier Enforcement (Phase 2): Stripe integration with checkout, portal, and webhook support.
 - Supabase Edge Functions for `create-checkout-session`, `create-portal-session`, and `stripe-webhook`.
 - Pricing page with Free / Student ($2/mo) / Pro ($5/mo) tier comparison.

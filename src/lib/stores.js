@@ -7,6 +7,15 @@ export const activeDetailId = writable(null);      // detail view target
 export const activeDraft = writable(null);         // add view draft
 export const authStore = writable({ user: null, session: null, isGuest: true });
 
+// PWA: Online/Offline state
+export const isOnline = writable(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+// PWA: Install prompt state
+export const deferredPrompt = writable(null);
+export const canInstall = writable(false);
+export const showInstallBanner = writable(false);
+export const showIOSInstructions = writable(false);
+
 // Theme defaults to 'system' and will be loaded asynchronously during initialization
 export const theme = writable('system');
 

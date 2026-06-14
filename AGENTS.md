@@ -33,6 +33,7 @@
 | Backend functions | Supabase Edge Functions (Deno runtime) |
 | Billing | Stripe (Checkout, Customer Portal, Webhooks) |
 | PDF parsing | `pdf.js` loaded on-demand from CDN |
+| PWA | vite-plugin-pwa (Workbox), IndexedDB for offline queue |
 | Path alias | `$lib` → `src/lib/` (configured in `vite.config.js` + `jsconfig.json`) |
 | CI | GitHub Actions: lint → type-check → build on push to `main`/`saas-base` |
 
@@ -44,27 +45,42 @@
 /
 ├── index.html                         # App shell
 ├── style.css                          # Global CSS (vars, components, layout)
-├── vite.config.js                     # Vite + Svelte plugin, $lib alias
+├── vite.config.js                     # Vite + Svelte plugin, $lib alias, PWA config
 ├── jsconfig.json                      # TS path aliases for svelte-check
 ├── eslint.config.js                   # ESLint flat config (JS + Svelte)
-├── package.json                       # deps: @supabase/supabase-js, @stripe/stripe-js
+├── package.json                       # deps: @supabase/supabase-js, @stripe/stripe-js, vite-plugin-pwa
 ├── .env.production                    # Placeholder env vars (safe to commit)
 ├── saas-conversion-plan.md            # 10-phase SaaS roadmap (master spec)
 ├── CHANGELOG.md                       # Feature changelog
 │
+├── public/
+│   ├── manifest.json                  # PWA manifest
+│   └── icons/                         # PWA icons (72-512px)
+│       ├── icon-72.png
+│       ├── icon-96.png
+│       ├── icon-128.png
+│       ├── icon-144.png
+│       ├── icon-152.png
+│       ├── icon-192.png
+│       ├── icon-384.png
+│       ├── icon-512.png
+│       └── icon-512-maskable.png
+│
 ├── src/
-│   ├── main.js                        # Svelte mount
+│   ├── main.js                        # Svelte mount + PWA init
 │   ├── App.svelte                     # Root: auth state, adapter routing, view switch
 │   │
 │   ├── lib/
 │   │   ├── supabase.js                # createClient() export
-│   │   ├── stores.js                  # All Svelte writable/derived stores
-│   │   ├── storage.js                 # Storage facade (proxy to active adapter)
+│   │   ├── stores.js                  # All Svelte writable/derived stores (inc. PWA stores)
+│   │   ├── storage.js                 # Storage facade (proxy to active adapter, offline queue)
 │   │   ├── model.js                   # normalizeProfile/Assignment/Task/Project
 │   │   ├── migrations.js              # Schema migration runner (v1–v4)
 │   │   ├── constants.js               # TYPES, STATUS, SUBSCRIPTION_*, STORAGE_KEYS
 │   │   ├── billing.js                 # canCreateItem, canUseAI, canAccessFeature
 │   │   ├── undoStack.js               # Single-level undo store
+│   │   ├── pwa.js                     # PWA initialization, install prompt, iOS detection
+│   │   ├── offlineQueue.js            # IndexedDB-based offline mutation queue
 │   │   │
 │   │   ├── storage/
 │   │   │   ├── adapter.js             # Base StorageAdapter class (interface)
@@ -93,7 +109,8 @@
 │   │   ├── ConfirmModal.svelte
 │   │   ├── UndoToast.svelte
 │   │   ├── UpgradeBanner.svelte       # Inline upgrade prompt strip
-│   │   └── UpgradeGate.svelte         # Full-panel feature lock UI
+│   │   ├── UpgradeGate.svelte         # Full-panel feature lock UI
+│   │   └── InstallBanner.svelte       # PWA install prompt banner
 │   │
 │   ├── routes/
 │   │   ├── auth/
@@ -572,7 +589,7 @@ Dark mode: applied via `[data-theme='dark']` attribute on `<html>` OR `@media (p
 | 1 | Auth + Cloud Sync | ✅ Complete |
 | 2 | Billing & Tier Enforcement | ✅ Complete |
 | 3 | AI Proxy Layer | ✅ Complete |
-| 4 | PWA | ⏳ Not started |
+| 4 | PWA | ✅ Complete |
 | 5 | Collaboration (Team) | ⏳ Not started |
 | 6 | Smart AI Features | ⏳ Not started |
 | 7 | Analytics | ⏳ Not started |
@@ -610,17 +627,16 @@ Dark mode: applied via `[data-theme='dark']` attribute on `<html>` OR `@media (p
 
 ---
 
-## 19. Next Steps (Phase 4 — PWA)
+## 19. Next Steps (Phase 5 — Collaboration)
 
 The next phase to implement per `saas-conversion-plan.md`:
 
-1. Create PWA manifest at `/public/manifest.json` with app icons
-2. Install `vite-plugin-pwa` and configure Workbox with caching strategies
-3. Add offline state detection via Svelte store (`online`/`offline` events)
-4. Show subtle offline indicator in header when disconnected
-5. Queue write mutations in IndexedDB when offline, flush on reconnect
-6. Add "Add to Home Screen" install prompt after 3+ visits
-7. iOS Safari manual install instruction for devices without `beforeinstallprompt`
+1. Add team management tables (teams, team_members)
+2. Implement team invitation flow via email
+3. Add shared projects visibility
+4. Implement real-time sync with Supabase Realtime
+5. Add task comments and activity feed
+6. Implement team skills profile
 
 ---
 
