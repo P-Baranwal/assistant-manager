@@ -3,6 +3,7 @@ import * as anthropic from './providers/anthropic.js';
 import * as openai from './providers/openai.js';
 import * as gemini from './providers/gemini.js';
 import * as groq from './providers/groq.js';
+import * as proxy from './providers/proxy.js';
 import { JSON_SCHEMA_PROMPT, normalizeAnalysisResult } from './contract.js';
 
 const providers = {
@@ -13,17 +14,21 @@ const providers = {
     groq
 };
 
-export async function fetchHealth(profile) {
+function getPlugin(profile) {
+    if (profile.useProxy) return proxy;
     const providerName = profile.provider || 'ollama';
     const plugin = providers[providerName];
     if (!plugin) throw new Error(`Unknown provider: ${providerName}`);
+    return plugin;
+}
+
+export async function fetchHealth(profile) {
+    const plugin = getPlugin(profile);
     return await plugin.healthCheck(profile);
 }
 
 export async function analyzeAssignment(rawContent, profile, boostReason=null, existingContext=null) {
-    const providerName = profile.provider || 'ollama';
-    const plugin = providers[providerName];
-    if (!plugin) throw new Error(`Unknown provider: ${providerName}`);
+    const plugin = getPlugin(profile);
 
     // Always assert health/validity briefly before execution
     const v = plugin.validate(profile);
@@ -118,16 +123,15 @@ ${rawContent}
     const rawResponseText = await plugin.analyze({
         system: systemMsg,
         user: userMsg,
-        profile: profile
+        profile: profile,
+        feature: boostReason ? 're_analyze' : 'priority_score'
     });
 
     return normalizeAnalysisResult(rawResponseText);
 }
 
 export async function generateWBS(brief, profile) {
-    const providerName = profile.provider || 'ollama';
-    const plugin = providers[providerName];
-    if (!plugin) throw new Error(`Unknown provider: ${providerName}`);
+    const plugin = getPlugin(profile);
 
     const v = plugin.validate(profile);
     if (!v.ok) throw new Error(`Provider invalid: ${v.message}`);
@@ -156,7 +160,7 @@ Rules:
 
     const user = `Client brief / feature request:\n"""\n${brief}\n"""`;
 
-    const raw = await plugin.analyze({ system, user, profile });
+    const raw = await plugin.analyze({ system, user, profile, feature: 'wbs_generate' });
 
     // Parse and validate
     let parsed;

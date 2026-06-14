@@ -12,7 +12,8 @@ export function normalizeProfile(p) {
         apiKey: p.apiKey || "",
         mode: TIERS.includes(p.mode) ? p.mode : 'student',
         subscription: SUBSCRIPTION_TIERS.includes(p.subscription) ? p.subscription : 'free',
-        defaultProjectId: p.defaultProjectId || null
+        defaultProjectId: p.defaultProjectId || null,
+        useProxy: !!p.useProxy
     };
 }
 

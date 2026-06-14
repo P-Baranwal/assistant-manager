@@ -4,7 +4,8 @@
     import { fetchHealth, analyzeAssignment } from '$lib/llm/client';
     import { providerReachable } from '$lib/stores';
     import { supabase } from '$lib/supabase';
-    import { SUBSCRIPTION_LABELS } from '$lib/constants';
+    import { SUBSCRIPTION_LIMITS, SUBSCRIPTION_LABELS } from '$lib/constants';
+    import { canAccessFeature } from '$lib/billing';
     import ConfirmModal from '../../components/ConfirmModal.svelte';
 
     async function handleSignOut() {
@@ -49,7 +50,8 @@
         customPriorityRule: '',
         apiKey: '',
         ollamaUrl: 'http://localhost:11434',
-        ollamaModel: ''
+        ollamaModel: '',
+        useProxy: false
     };
 
     let testResult = '';
@@ -67,6 +69,13 @@
     let confirmConfig = { show: false, title: '', message: '', onConfirm: null };
 
     $: canAccessProMode = p.subscription === 'pro' || p.subscription === 'team';
+    $: canUseProxy = canAccessFeature(p.subscription || 'free', 'aiProxy');
+    $: monthlyUsageRemainingText = (() => {
+        if (!p.subscription) return '';
+        const limits = SUBSCRIPTION_LIMITS[p.subscription] || SUBSCRIPTION_LIMITS.free;
+        if (limits.aiMonthlyLimit === -1) return 'Unlimited';
+        return `${limits.aiMonthlyLimit} analyses/month`;
+    })();
 
     async function testProvider() {
         testColor = 'var(--text-main)';
@@ -84,6 +93,51 @@
         } catch(err) {
             testColor = 'var(--danger, red)';
             testResult = err.message || 'Error during test';
+        }
+    }
+
+    async function testProxy() {
+        testColor = 'var(--text-main)';
+        testResult = 'Testing proxy...';
+        
+        try {
+            const proxyUrl = import.meta.env.VITE_AI_PROXY_URL;
+            if (!proxyUrl) throw new Error('VITE_AI_PROXY_URL not configured');
+            
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) throw new Error('Not authenticated');
+            
+            const res = await fetch(proxyUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                },
+                body: JSON.stringify({
+                    system: 'Reply with exactly: "proxy_ok"',
+                    user: 'Say proxy_ok',
+                    provider: 'groq',
+                    feature: 'health_check',
+                }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || `Proxy error: ${res.status}`);
+            }
+
+            const data = await res.json();
+            if (data.content) {
+                testColor = 'var(--success, green)';
+                testResult = 'Clerify AI proxy connected';
+            } else {
+                testColor = 'var(--danger, red)';
+                testResult = 'Proxy returned empty response';
+            }
+        } catch(err) {
+            testColor = 'var(--danger, red)';
+            testResult = err.message || 'Proxy test failed';
         }
     }
 
@@ -307,37 +361,82 @@
 
 <div class="card mb-4 animate-fade">
     <div class="card-title mb-4">AI Provider</div>
-    <div class="form-group">
-        <label class="form-label" for="set-provider">Provider Layer</label>
-        <select id="set-provider" class="input" bind:value={p.provider}>
-            <option value="ollama">Ollama (Local)</option>
-            <option value="anthropic">Anthropic (Claude)</option>
-            <option value="openai">OpenAI (GPT-4)</option>
-            <option value="gemini">Google (Gemini)</option>
-            <option value="groq">Groq (Llama, Gemma)</option>
-        </select>
-    </div>
-
-    {#if p.provider !== 'ollama'}
+    
+    {#if canUseProxy}
         <div class="form-group">
-            <label class="form-label" for="set-apiKey">API Key</label>
-            <input id="set-apiKey" type="password" class="input" bind:value={p.apiKey} placeholder="Enter your API key">
+            <label class="form-label">AI Mode</label>
+            <div class="flex flex-col gap-2 mt-2">
+                <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                    <input type="radio" value={true} bind:group={p.useProxy}> Use Clerify AI (included in plan)
+                </label>
+                <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                    <input type="radio" value={false} bind:group={p.useProxy}> Use my own API key (BYOK)
+                </label>
+            </div>
+            <p class="text-xs text-muted mt-2">
+                {#if p.useProxy}
+                    Clerify AI routes through our servers — no API key needed. {monthlyUsageRemainingText}.
+                {:else}
+                    Your API key is stored encrypted and used directly from your browser.
+                {/if}
+            </p>
         </div>
     {:else}
-        <div class="form-group">
-            <label class="form-label" for="set-baseUrl">Base URL</label>
-            <input id="set-baseUrl" type="text" class="input" bind:value={p.ollamaUrl} placeholder="http://localhost:11434">
+        <div class="proxy-locked mb-3">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="text-sm" style="font-weight:500;">🔒 Clerify AI Proxy</span>
+                <span class="badge badge-pro">Student+</span>
+            </div>
+            <p class="text-xs text-muted mb-2">Sign in and upgrade to use Clerify AI — no API key required.</p>
+            {#if $authStore.isGuest}
+                <button class="btn btn-sm btn-primary" on:click={() => view.set('auth')}>Sign Up Free</button>
+            {:else}
+                <button class="btn btn-sm btn-primary" on:click={() => view.set('pricing')}>Upgrade to unlock</button>
+            {/if}
+        </div>
+        <div class="form-group mb-0">
+            <label class="form-label" style="color:var(--text-main);">Using: Your own API key (BYOK)</label>
         </div>
     {/if}
 
-    <div class="form-group mb-0">
-        <label class="form-label" for="set-model">Model Name <span class="text-xs text-muted" style="font-weight:normal">(Optional override)</span></label>
-        <input id="set-model" type="text" class="input" bind:value={p.ollamaModel} placeholder="Leave blank for default">
-        <p class="text-xs text-muted mt-2">{MODEL_HINTS[p.provider]}</p>
-    </div>
+    {#if !p.useProxy || !canUseProxy}
+        <div class="byok-config" class:mt-3={canUseProxy}>
+            {#if canUseProxy}
+                <div style="border-top:1px solid var(--border-color); padding-top:0.75rem; margin-top:0.5rem;"></div>
+            {/if}
+            <div class="form-group">
+                <label class="form-label" for="set-provider">Provider</label>
+                <select id="set-provider" class="input" bind:value={p.provider}>
+                    <option value="ollama">Ollama (Local)</option>
+                    <option value="anthropic">Anthropic (Claude)</option>
+                    <option value="openai">OpenAI (GPT-4)</option>
+                    <option value="gemini">Google (Gemini)</option>
+                    <option value="groq">Groq (Llama, Gemma)</option>
+                </select>
+            </div>
+
+            {#if p.provider !== 'ollama'}
+                <div class="form-group">
+                    <label class="form-label" for="set-apiKey">API Key</label>
+                    <input id="set-apiKey" type="password" class="input" bind:value={p.apiKey} placeholder="Enter your API key">
+                </div>
+            {:else}
+                <div class="form-group">
+                    <label class="form-label" for="set-baseUrl">Base URL</label>
+                    <input id="set-baseUrl" type="text" class="input" bind:value={p.ollamaUrl} placeholder="http://localhost:11434">
+                </div>
+            {/if}
+
+            <div class="form-group mb-0">
+                <label class="form-label" for="set-model">Model Name <span class="text-xs text-muted" style="font-weight:normal">(Optional override)</span></label>
+                <input id="set-model" type="text" class="input" bind:value={p.ollamaModel} placeholder="Leave blank for default">
+                <p class="text-xs text-muted mt-2">{MODEL_HINTS[p.provider]}</p>
+            </div>
+        </div>
+    {/if}
 
     <div class="flex items-center gap-4 mt-4 pt-4" style="border-top:1px solid var(--border-color)">
-        <button class="btn btn-primary" on:click={testProvider}>Test Connection</button>
+        <button class="btn btn-primary" on:click={p.useProxy && canUseProxy ? testProxy : testProvider}>Test Connection</button>
         <span class="text-sm" style="color: {testColor}; font-weight: 500;">{testResult}</span>
     </div>
 </div>
@@ -441,5 +540,28 @@
         cursor: pointer;
         padding: 0;
         text-decoration: underline;
+    }
+    .proxy-locked {
+        padding: 0.75rem 1rem;
+        background: var(--bg-card);
+        border: 1px dashed var(--border-color);
+        border-radius: 8px;
+    }
+    .badge {
+        display: inline-block;
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.625rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .badge-pro {
+        background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.15), rgba(var(--primary-rgb), 0.08));
+        color: var(--primary);
+    }
+    .btn-sm {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.75rem;
     }
 </style>

@@ -82,7 +82,7 @@
             try {
                 resultContext = await analyzeAssignment(rawText, $profile);
             } catch (e) {
-                errorMsg = "LLM Parsing Failed. Edit skeleton below.";
+                errorMsg = e.message || "LLM Parsing Failed. Edit skeleton below.";
                 resultContext = {
                     title: mForm.title || "Unknown Task",
                     type: mForm.type || 'Other',
