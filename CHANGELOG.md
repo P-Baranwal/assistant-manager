@@ -5,6 +5,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.0.9]
+### Added
+- Calendar Sync (Phase 9): iCal feed export for syncing tasks with any calendar app.
+- Supabase Edge Function (`calendar-feed`) that generates RFC 5545 compliant `.ics` files.
+- Long-lived, revocable calendar feed tokens stored on user profiles (not JWT-based).
+- Calendar Sync settings section with feed URL display, copy button, and regenerate token.
+- Step-by-step setup instructions for Google Calendar, Apple Calendar, and Outlook.
+- Calendar feed includes active tasks and assignments with deadlines as all-day events.
+- Each calendar event includes title, type, estimated hours, priority score, and deep link to app.
+- Automatic 1-day-before reminder alarm on each calendar event.
+- 1-hour cache header on iCal feed responses for efficient calendar app polling.
+- New Supabase migration (`00005_calendar_sync_schema.sql`): adds `calendar_feed_token` column to profiles, `get_or_create_calendar_token()` and `regenerate_calendar_token()` RPCs, and index for fast token lookups.
+- `calendarFeedToken` field in normalized profile model.
+
+### Changed
+- Settings page now shows Calendar Sync section (paid tiers only, upgrade prompt for free users).
+- AGENTS.md updated with Phase 9 completion status.
+
 ## [0.0.8]
 ### Added
 - Browser Extension (Phase 8): Chrome extension for capturing tasks from any webpage.

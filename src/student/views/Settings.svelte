@@ -8,6 +8,7 @@
     import { canAccessFeature } from '$lib/billing';
     import { teamService } from '$lib/teams';
     import ConfirmModal from '../../components/ConfirmModal.svelte';
+    import UpgradeBanner from '../../components/UpgradeBanner.svelte';
 
     async function handleSignOut() {
         try {
@@ -72,6 +73,13 @@
     // Team invite state
     let teamInvites = [];
     let teamLoading = false;
+
+    // Calendar feed state
+    let calendarFeedUrl = '';
+    let calendarGenerating = false;
+    let calendarCopied = false;
+    let calendarError = '';
+    let calendarShowInstructions = false;
 
     // AI Insights state
     $: accuracyInsights = (() => {
@@ -273,6 +281,73 @@
             ? `Done! ${done - failed}/${total} updated, ${failed} failed.`
             : `Done! All ${total} assignments re-scored.`;
         rescoring = false;
+    }
+
+    // ── Calendar Feed ──
+    async function generateCalendarFeed() {
+        if ($authStore.isGuest) {
+            calendarError = 'Sign in to enable calendar sync.';
+            return;
+        }
+
+        calendarGenerating = true;
+        calendarError = '';
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) throw new Error('Not authenticated');
+
+            const { data, error } = await supabase.rpc('get_or_create_calendar_token');
+            if (error) throw error;
+
+            p.calendarFeedToken = data;
+            profile.set(p);
+
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            calendarFeedUrl = `${supabaseUrl}/functions/v1/calendar-feed/${data}`;
+        } catch (err) {
+            calendarError = err.message || 'Failed to generate calendar feed';
+        }
+
+        calendarGenerating = false;
+    }
+
+    async function regenerateCalendarFeed() {
+        if ($authStore.isGuest) return;
+
+        calendarGenerating = true;
+        calendarError = '';
+
+        try {
+            const { data, error } = await supabase.rpc('regenerate_calendar_token');
+            if (error) throw error;
+
+            p.calendarFeedToken = data;
+            profile.set(p);
+
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            calendarFeedUrl = `${supabaseUrl}/functions/v1/calendar-feed/${data}`;
+        } catch (err) {
+            calendarError = err.message || 'Failed to regenerate calendar feed';
+        }
+
+        calendarGenerating = false;
+    }
+
+    async function copyCalendarFeedUrl() {
+        if (!calendarFeedUrl) return;
+        try {
+            await navigator.clipboard.writeText(calendarFeedUrl);
+            calendarCopied = true;
+            setTimeout(() => { calendarCopied = false; }, 2000);
+        } catch {
+            calendarError = 'Copy failed. Select and copy manually.';
+        }
+    }
+
+    $: if (p.calendarFeedToken && !calendarFeedUrl) {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        calendarFeedUrl = `${supabaseUrl}/functions/v1/calendar-feed/${p.calendarFeedToken}`;
     }
 
     // ── Export ──
@@ -623,6 +698,78 @@
     {/if}
 </div>
 
+<div class="card mb-4 animate-fade">
+    <div class="card-title mb-4">Calendar Sync</div>
+    {#if $authStore.isGuest}
+        <p class="text-sm text-muted mb-3">Sign in and upgrade to sync tasks to your calendar app.</p>
+        <button class="btn btn-primary" on:click={() => view.set('auth')}>Sign Up Free</button>
+    {:else if p.subscription === 'free'}
+        <UpgradeBanner message="Upgrade to sync tasks with your calendar app." requiredTier="student" />
+    {:else}
+        {#if calendarFeedUrl}
+            <div class="calendar-feed-url-row mb-3">
+                <code class="calendar-feed-url" title={calendarFeedUrl}>{calendarFeedUrl}</code>
+                <button class="btn btn-sm" on:click={copyCalendarFeedUrl}>
+                    {calendarCopied ? '✓ Copied' : 'Copy'}
+                </button>
+            </div>
+        {:else}
+            <p class="text-sm text-muted mb-3">Generate a calendar feed URL to sync your tasks with Google Calendar, Apple Calendar, or Outlook.</p>
+            <button class="btn btn-primary" on:click={generateCalendarFeed} disabled={calendarGenerating}>
+                {calendarGenerating ? 'Generating...' : 'Generate Calendar Feed'}
+            </button>
+        {/if}
+
+        {#if calendarError}
+            <p class="text-sm mt-2" style="color: var(--danger);">{calendarError}</p>
+        {/if}
+
+        {#if calendarFeedUrl}
+            <div class="mt-4 pt-4" style="border-top:1px solid var(--border-color)">
+                <button class="text-link text-sm" on:click={() => calendarShowInstructions = !calendarShowInstructions}>
+                    {calendarShowInstructions ? 'Hide' : 'Show'} Setup Instructions
+                </button>
+
+                {#if calendarShowInstructions}
+                    <div class="mt-3 calendar-instructions">
+                        <div class="calendar-instruction-group">
+                            <strong class="text-sm">Google Calendar</strong>
+                            <ol class="text-xs text-muted">
+                                <li>Open <a href="https://calendar.google.com/calendar/r/settings" target="_blank" rel="noopener">Google Calendar Settings</a></li>
+                                <li>Click <strong>Import & export</strong> → <strong>Subscribe to calendar</strong> (left sidebar)</li>
+                                <li>Paste the feed URL and click <strong>Add calendar</strong></li>
+                            </ol>
+                        </div>
+                        <div class="calendar-instruction-group">
+                            <strong class="text-sm">Apple Calendar (macOS / iOS)</strong>
+                            <ol class="text-xs text-muted">
+                                <li>Open Calendar app → <strong>File</strong> → <strong>New Calendar Subscription</strong> (macOS) or <strong>Settings</strong> → <strong>Calendars</strong> → <strong>Add Calendar</strong> → <strong>Subscribe to Calendar</strong> (iOS)</li>
+                                <li>Paste the feed URL</li>
+                                <li>Set auto-refresh to <strong>Every hour</strong> and click OK</li>
+                            </ol>
+                        </div>
+                        <div class="calendar-instruction-group">
+                            <strong class="text-sm">Outlook</strong>
+                            <ol class="text-xs text-muted">
+                                <li>Open Outlook → <strong>Calendar</strong> view</li>
+                                <li>Click <strong>Add calendar</strong> → <strong>Subscribe from web</strong></li>
+                                <li>Paste the feed URL and click <strong>Import</strong></li>
+                            </ol>
+                        </div>
+                    </div>
+                {/if}
+
+                <div class="mt-3 flex gap-3">
+                    <button class="btn btn-sm" on:click={regenerateCalendarFeed} disabled={calendarGenerating}>
+                        Regenerate Feed URL
+                    </button>
+                    <span class="text-xs text-muted" style="align-self:center">Invalidates the old URL</span>
+                </div>
+            </div>
+        {/if}
+    {/if}
+</div>
+
 {#if p.subscription === 'team'}
     <div class="card mb-4 animate-fade">
         <div class="card-title mb-4">Team Management</div>
@@ -711,5 +858,42 @@
     .btn-sm {
         padding: 0.25rem 0.75rem;
         font-size: 0.75rem;
+    }
+    .calendar-feed-url-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--surface-color, #f9f9fb);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius, 8px);
+        padding: 0.5rem 0.75rem;
+    }
+    .calendar-feed-url {
+        flex: 1;
+        font-size: 0.7rem;
+        word-break: break-all;
+        color: var(--text-muted);
+        font-family: monospace;
+        line-height: 1.4;
+    }
+    .calendar-instructions {
+        background: var(--surface-color, #f9f9fb);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius, 8px);
+        padding: 1rem;
+    }
+    .calendar-instruction-group {
+        margin-bottom: 0.75rem;
+    }
+    .calendar-instruction-group:last-child {
+        margin-bottom: 0;
+    }
+    .calendar-instruction-group ol {
+        margin: 0.25rem 0 0 1.25rem;
+        padding: 0;
+        line-height: 1.6;
+    }
+    .calendar-instruction-group li {
+        margin-bottom: 0.25rem;
     }
 </style>

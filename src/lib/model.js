@@ -16,7 +16,8 @@ export function normalizeProfile(p) {
         useProxy: !!p.useProxy,
         teamId: p.teamId || null,
         availableHoursPerDay: Math.max(1, Math.min(16, parseInt(p.availableHoursPerDay) || 6)),
-        weeklyDigestOptIn: p.weeklyDigestOptIn !== undefined ? !!p.weeklyDigestOptIn : true
+        weeklyDigestOptIn: p.weeklyDigestOptIn !== undefined ? !!p.weeklyDigestOptIn : true,
+        calendarFeedToken: p.calendarFeedToken || null
     };
 }
 

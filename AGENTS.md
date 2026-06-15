@@ -165,11 +165,13 @@
 │   │   ├── stripe-webhook/index.ts
 │   │   ├── ai-proxy/index.ts
 │   │   └── weekly-digest/index.ts    # Scheduled email digest (Phase 6)
+│   │   └── calendar-feed/index.ts    # iCal feed generation (Phase 9)
 │   │   ├── create-portal-session/index.ts
 │   │   └── stripe-webhook/index.ts
 │   └── migrations/
 │       ├── 00001_initial_schema.sql   # Profiles, projects, assignments, tasks, RLS, triggers, BYOK
-│       └── 00002_billing_schema.sql   # tier→mode rename, subscription col, ai_usage table, RPCs
+│       ├── 00002_billing_schema.sql   # tier→mode rename, subscription col, ai_usage table, RPCs
+│       └── 00005_calendar_sync_schema.sql   # Calendar feed token column + RPCs
 │
 └── .github/workflows/ci.yml
 ```
@@ -268,7 +270,8 @@ All models are normalized by functions in `src/lib/model.js`.
   useProxy: boolean,              // true = route AI through proxy, false = BYOK direct
   teamId: string|null,
   availableHoursPerDay: number,   // default 6; used for risk alerts & weekly plan
-  weeklyDigestOptIn: boolean      // default true; email digest opt-in
+  weeklyDigestOptIn: boolean,      // default true; email digest opt-in
+  calendarFeedToken: string|null   // UUID for iCal feed URL (Phase 9)
 }
 ```
 
@@ -539,6 +542,7 @@ subscription_status text CHECK ('active'|'trialing'|'past_due'|'canceled'|'unpai
 current_period_end timestamptz
 default_project_id uuid → projects(id)
 theme text CHECK ('light'|'dark'|'system')
+calendar_feed_token uuid UNIQUE    -- iCal feed token (Phase 9)
 created_at, updated_at
 ```
 
@@ -725,7 +729,7 @@ Dark mode: applied via `[data-theme='dark']` attribute on `<html>` OR `@media (p
 | 6 | Smart AI Features | ✅ Complete |
 | 7 | Analytics | ✅ Complete |
 | 8 | Browser Extension | ✅ Complete |
-| 9 | Calendar Sync (iCal) | ⏳ Not started |
+| 9 | Calendar Sync (iCal) | ✅ Complete |
 | 10 | Marketing & Growth | ⏳ Not started |
 
 ---
@@ -761,15 +765,14 @@ Dark mode: applied via `[data-theme='dark']` attribute on `<html>` OR `@media (p
 
 ---
 
-## 19. Next Steps (Phase 9 — Calendar Sync)
+## 19. Next Steps (Phase 10 — Marketing & Growth)
 
 The next phase to implement per `saas-conversion-plan.md`:
 
-1. iCal feed generation via Supabase Edge Function
-2. Calendar feed URL with copy functionality
-3. Subscription instructions for Google Calendar, Apple Calendar, Outlook
-4. Feed regeneration and filter options
-5. Caching with Cache-Control headers
+1. Marketing landing page (hero, features, pricing, FAQ)
+2. SEO basics (meta tags, og:image, sitemap.xml, robots.txt)
+3. Referral/viral loop via team invitations
+4. Student outreach strategy
 
 ---
 
