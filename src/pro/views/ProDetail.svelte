@@ -307,7 +307,7 @@
 
             <!-- Accuracy Feedback (completed tasks only) -->
             {#if detail.status === 'done' && detail.estimatedHours > 0 && detail.actualHours > 0}
-                {@const variance = ((detail.actualHours - detail.estimatedHours) / detail.estimatedHours * 100)}
+                {@const variance = (detail.actualHours - detail.estimatedHours) / detail.estimatedHours * 100}
                 <div class="accuracy-feedback mt-4">
                     <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Time Accuracy</h3>
                     <div class="accuracy-comparison">
