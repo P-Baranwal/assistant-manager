@@ -5,6 +5,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.0.8]
+### Added
+- Browser Extension (Phase 8): Chrome extension for capturing tasks from any webpage.
+- Manifest V3 Chrome extension architecture in `packages/extension/` directory.
+- Background service worker with Supabase auth integration, token management, and badge updates.
+- Popup UI with task creation form pre-filled from page context (title, URL, selected text).
+- Content script for automatic page data capture and selection monitoring.
+- Context menu integration: right-click to send text/links to Clerify.
+- Badge count showing number of tasks due today (updates every 15 minutes).
+- Supabase API integration for direct task creation from extension.
+- Webpack build configuration for extension development and production.
+- Monorepo support via npm workspaces in root `package.json`.
+- Extension documentation in `packages/extension/README.md`.
+
+### Changed
+- Root `package.json` updated with workspaces configuration for monorepo structure.
+- Added `extension:dev` and `extension:build` scripts to root package.json.
+- AGENTS.md updated with Phase 8 completion status and extension directory structure.
+
 ## [0.0.7]
 ### Added
 - Productivity Analytics (Phase 7): comprehensive analytics dashboard with velocity tracking, time accuracy analysis, and data export.

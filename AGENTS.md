@@ -13,7 +13,7 @@
 |---|---|
 | **App name** | Clerify (rebranded from "Assistant Manager") |
 | **Original purpose** | Personal offline task/assignment manager with local LLM analysis |
-| **Current state** | SaaS conversion in progress; Phases 0–6 shipped |
+| **Current state** | SaaS conversion in progress; Phases 0–8 shipped |
 | **Entry point** | `index.html` → `src/main.js` → `src/App.svelte` |
 | **App title in HTML** | Still "Assignment Manager" — needs updating to Clerify |
 
@@ -65,6 +65,20 @@
 │       ├── icon-384.png
 │       ├── icon-512.png
 │       └── icon-512-maskable.png
+│
+├── packages/
+│   └── extension/                     # Browser extension (Manifest V3)
+│       ├── manifest.json              # Chrome extension manifest
+│       ├── package.json               # Extension dependencies
+│       ├── webpack.config.js          # Build configuration
+│       ├── popup.html                 # Extension popup UI
+│       ├── popup.css                  # Popup styles
+│       ├── README.md                  # Extension documentation
+│       ├── icons/                     # Extension icons (16-128px)
+│       └── src/
+│           ├── background.js          # Service worker (auth, badge, context menu)
+│           ├── content.js             # Content script (page capture)
+│           └── popup.js               # Popup logic (form, API calls)
 │
 ├── src/
 │   ├── main.js                        # Svelte mount + PWA init
@@ -710,7 +724,7 @@ Dark mode: applied via `[data-theme='dark']` attribute on `<html>` OR `@media (p
 | 5 | Collaboration (Team) | ✅ Complete |
 | 6 | Smart AI Features | ✅ Complete |
 | 7 | Analytics | ✅ Complete |
-| 8 | Browser Extension | ⏳ Not started |
+| 8 | Browser Extension | ✅ Complete |
 | 9 | Calendar Sync (iCal) | ⏳ Not started |
 | 10 | Marketing & Growth | ⏳ Not started |
 
@@ -730,6 +744,8 @@ Dark mode: applied via `[data-theme='dark']` attribute on `<html>` OR `@media (p
 10. **Supabase `app:schemaVersion` key** — the `SupabaseAdapter.get()` returns `null` for unknown keys, so schema version tracking still effectively runs only against localStorage for guests; cloud users always re-run migration checks harmlessly
 11. **Weekly digest Edge Function** requires `RESEND_API_KEY` and `RESEND_FROM` env vars for email delivery; also requires a Supabase cron trigger to be configured
 12. **`weekly-digest` Edge Function** needs the user's email resolved from `auth.users` — currently the `to` field uses `profile.id` which must be mapped to email via a Supabase join or separate query
+13. **Browser extension** requires Supabase URL and anon key configuration in `packages/extension/src/background.js` and `packages/extension/src/popup.js`
+14. **Browser extension** icons need to be added to `packages/extension/icons/` directory (16px, 32px, 48px, 128px)
 
 ---
 
@@ -745,15 +761,15 @@ Dark mode: applied via `[data-theme='dark']` attribute on `<html>` OR `@media (p
 
 ---
 
-## 19. Next Steps (Phase 8 — Browser Extension)
+## 19. Next Steps (Phase 9 — Calendar Sync)
 
 The next phase to implement per `saas-conversion-plan.md`:
 
-1. Manifest V3 Chrome extension architecture
-2. Capture from page functionality
-3. Auth in extension
-4. Context menu integration
-5. Badge count for due tasks
+1. iCal feed generation via Supabase Edge Function
+2. Calendar feed URL with copy functionality
+3. Subscription instructions for Google Calendar, Apple Calendar, Outlook
+4. Feed regeneration and filter options
+5. Caching with Cache-Control headers
 
 ---
 

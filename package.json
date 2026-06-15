@@ -1,14 +1,19 @@
 {
-  "name": "svelte-scaffold",
+  "name": "clerify",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "type-check": "svelte-check --threshold error"
+    "type-check": "svelte-check --threshold error",
+    "extension:dev": "cd packages/extension && npm run dev",
+    "extension:build": "cd packages/extension && npm run build"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.0.0",
