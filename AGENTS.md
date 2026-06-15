@@ -3,7 +3,7 @@
 # Clerify — Project Memory
 
 > Generated snapshot for LLM context. The codebase is a Svelte 5 + Supabase SaaS app,
-> currently at **Phase 6 complete** of the 10-phase `saas-conversion-plan.md`.
+> currently at **Phase 7 complete** of the 10-phase `saas-conversion-plan.md`.
 
 ---
 
@@ -709,7 +709,7 @@ Dark mode: applied via `[data-theme='dark']` attribute on `<html>` OR `@media (p
 | 4 | PWA | ✅ Complete |
 | 5 | Collaboration (Team) | ✅ Complete |
 | 6 | Smart AI Features | ✅ Complete |
-| 7 | Analytics | ⏳ Not started |
+| 7 | Analytics | ✅ Complete |
 | 8 | Browser Extension | ⏳ Not started |
 | 9 | Calendar Sync (iCal) | ⏳ Not started |
 | 10 | Marketing & Growth | ⏳ Not started |
@@ -745,13 +745,15 @@ Dark mode: applied via `[data-theme='dark']` attribute on `<html>` OR `@media (p
 
 ---
 
-## 19. Next Steps (Phase 7 — Productivity Analytics)
+## 19. Next Steps (Phase 8 — Browser Extension)
 
 The next phase to implement per `saas-conversion-plan.md`:
 
-1. Personal Dashboard Stats (velocity, time accuracy, streaks)
-2. Team Analytics (team velocity, workload distribution, blocker trends)
-3. Data Export (CSV, PDF report)
+1. Manifest V3 Chrome extension architecture
+2. Capture from page functionality
+3. Auth in extension
+4. Context menu integration
+5. Badge count for due tasks
 
 ---
 

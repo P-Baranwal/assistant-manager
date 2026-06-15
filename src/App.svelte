@@ -29,6 +29,7 @@
     import ProDetail from './pro/views/ProDetail.svelte';
     import TeamSettings from './pro/views/TeamSettings.svelte';
     import WeekPlan from './pro/views/WeekPlan.svelte';
+    import Analytics from './components/Analytics.svelte';
 
     let isInitializing = true;
     let globalSpinner = { show: false, text: 'Processing...' };
@@ -174,6 +175,8 @@
             <TeamSettings />
         {:else if $view === 'week-plan'}
             <WeekPlan />
+        {:else if $view === 'analytics'}
+            <Analytics />
         {/if}
     </main>
 {:else}
@@ -204,6 +207,8 @@
             <TeamSettings />
         {:else if $view === 'week-plan'}
             <WeekPlan />
+        {:else if $view === 'analytics'}
+            <Analytics />
         {/if}
     </main>
 {/if}

@@ -5,7 +5,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [0.0.6]
+## [0.0.7]
+### Added
+- Productivity Analytics (Phase 7): comprehensive analytics dashboard with velocity tracking, time accuracy analysis, and data export.
+- Analytics page accessible from both Student and Pro dashboards via navigation button.
+- Velocity chart: bar chart showing tasks completed per week for the last 8 weeks.
+- Time accuracy analysis: estimated vs actual hours by task type with variance percentages.
+- Project breakdown: doughnut chart showing time distribution by project over the last 30 days.
+- Streak tracking: consecutive days with at least one task completed.
+- AI calibration drift: visual representation of how priority scores and difficulty estimates have evolved over time.
+- Team analytics (Team tier): workload distribution, blocked tasks, and team velocity metrics.
+- CSV export: download all tasks/assignments with all fields for external analysis.
+- PDF report generation: monthly summary with completion rate, time accuracy, and project breakdown (Pro/Team feature).
+- Chart.js integration for interactive charts and visualizations.
+- Analytics styles added to global CSS for consistent theming.
+
+### Changed
+- StudentHeader and ProHeader now include Analytics navigation button with bar chart icon.
+- App.svelte routes to Analytics component for both student and professional modes.
+- Added `chart.js` and `svelte-chartjs` dependencies for charting capabilities.
 ### Added
 - Smart AI Features (Phase 6): intelligent scheduling, risk alerts, natural language entry, weekly digest, and accuracy feedback.
 - Smart Scheduling: "Plan My Week" button on both Student and Pro dashboards generates an AI-optimized weekly schedule based on active tasks, deadlines, priorities, and available hours.
