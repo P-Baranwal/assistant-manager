@@ -164,11 +164,11 @@ export class SupabaseAdapter extends StorageAdapter {
                 const plainApiKey = rawProfile.api_key || '';
                 delete rawProfile.api_key;
                 delete rawProfile.api_key_encrypted;
-                // Billing fields are managed by Stripe webhooks, not the client
+                // Billing fields are managed by Paddle webhooks, not the client
                 delete rawProfile.subscription;
                 delete rawProfile.subscription_status;
-                delete rawProfile.stripe_subscription_id;
-                delete rawProfile.stripe_customer_id;
+                delete rawProfile.billing_subscription_id;
+                delete rawProfile.billing_customer_id;
                 delete rawProfile.current_period_end;
                 const { error } = await supabase
                     .from('profiles')

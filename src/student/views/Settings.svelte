@@ -19,21 +19,31 @@
         }
     }
 
-    async function openPortal() {
+    async function manageSubscription(action, newPlanId = null) {
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-portal-session`, {
+            const body = { action };
+            if (newPlanId) body.newPlanId = newPlanId;
+
+            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-subscription`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session.access_token}`,
                     'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
                 },
+                body: JSON.stringify(body),
             });
+
             const data = await res.json();
-            if (data.url) window.location.href = data.url;
+            if (data.error) throw new Error(data.error);
+
+            // Reload profile to reflect changes
+            const updatedProfile = await storage.getProfile();
+            profile.set(updatedProfile);
+            p = updatedProfile;
         } catch (err) {
-            console.error("Portal error:", err);
+            console.error("Subscription management error:", err);
         }
     }
 
@@ -488,7 +498,17 @@
             {/if}
         </div>
         <div class="flex gap-3">
-            <button class="btn btn-primary" on:click={openPortal}>Manage Subscription</button>
+            <button class="btn btn-danger" on:click={() => {
+                confirmConfig = {
+                    show: true,
+                    title: 'Cancel Subscription',
+                    message: 'Your subscription will remain active until the end of the current billing period. Are you sure you want to cancel?',
+                    onConfirm: async () => {
+                        confirmConfig.show = false;
+                        await manageSubscription('cancel');
+                    }
+                };
+            }}>Cancel Subscription</button>
             <button class="btn" on:click={() => view.set('pricing')}>Change Plan</button>
         </div>
     {/if}

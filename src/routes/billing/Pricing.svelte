@@ -1,9 +1,21 @@
 <script>
     import { profile, view, authStore } from '$lib/stores';
-    import { supabase } from '$lib/supabase';
     import { SUBSCRIPTION_LABELS } from '$lib/constants';
+    import { initializePaddle } from '@paddle/paddle-js';
 
-    const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+    let paddleInstance = null;
+    let paddleLoading = true;
+
+    initializePaddle({
+        token: import.meta.env.VITE_PADDLE_TOKEN,
+        environment: import.meta.env.VITE_PADDLE_ENVIRONMENT || 'sandbox',
+    }).then((instance) => {
+        paddleInstance = instance;
+        paddleLoading = false;
+    }).catch((err) => {
+        console.error('Paddle initialization failed:', err);
+        paddleLoading = false;
+    });
 
     const plans = [
         {
@@ -30,7 +42,7 @@
             price: '$2',
             period: '/ month',
             description: 'For students who need more AI power and sync.',
-            stripePriceId: 'STRIPE_PRICE_STUDENT',
+            paddlePriceId: 'PADDLE_PRICE_STUDENT',
             features: [
                 { text: 'Unlimited tasks / assignments', included: true },
                 { text: '100 AI analyses / month', included: true },
@@ -50,7 +62,7 @@
             price: '$5',
             period: '/ month',
             description: 'Full access to all features and both modes.',
-            stripePriceId: 'STRIPE_PRICE_PRO',
+            paddlePriceId: 'PADDLE_PRICE_PRO',
             features: [
                 { text: 'Unlimited tasks / assignments', included: true },
                 { text: 'Unlimited AI analyses', included: true },
@@ -82,24 +94,29 @@
             return;
         }
 
+        if (!paddleInstance) {
+            error = 'Payment system is still loading. Please try again.';
+            return;
+        }
+
         loading = true;
         error = '';
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch(`${VITE_SUPABASE_URL}/functions/v1/create-checkout-session`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            paddleInstance.Checkout.open({
+                items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
+                customer: {
+                    email: $authStore.user?.email,
                 },
-                body: JSON.stringify({ priceId: plan.stripePriceId }),
+                customData: {
+                    supabase_user_id: $authStore.user?.id,
+                },
+                settings: {
+                    displayMode: 'overlay',
+                    theme: 'light',
+                    successUrl: `${window.location.origin}?checkout=success`,
+                },
             });
-
-            const data = await res.json();
-            if (data.error) throw new Error(data.error);
-            if (data.url) window.location.href = data.url;
         } catch (err) {
             error = err.message || 'Failed to start checkout.';
         } finally {
