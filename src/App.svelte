@@ -21,6 +21,7 @@
     import Calendar from './student/views/Calendar.svelte';
     import Auth from './routes/auth/Auth.svelte';
     import Pricing from './routes/billing/Pricing.svelte';
+    import Welcome from './routes/billing/Welcome.svelte';
 
     // Pro views
     import ProHeader from './pro/components/ProHeader.svelte';
@@ -88,6 +89,12 @@
     }
 
     onMount(async () => {
+        // Check for post-checkout redirect
+        if (typeof window !== 'undefined' && window.location.hash === '#welcome') {
+            view.set('welcome');
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+
         // 1. Storage Init
         await storage.init();
         
@@ -163,6 +170,8 @@
     <main class="view fade-in">
         {#if $view === 'pricing'}
             <Pricing />
+        {:else if $view === 'welcome'}
+            <Welcome />
         {:else if $view === 'dashboard'}
             <ProDashboard />
         {:else if $view === 'add'}
@@ -191,6 +200,8 @@
     <main class="view fade-in">
         {#if $view === 'pricing'}
             <Pricing />
+        {:else if $view === 'welcome'}
+            <Welcome />
         {:else if $view === 'dashboard'}
             <Dashboard />
         {:else if $view === 'add'}

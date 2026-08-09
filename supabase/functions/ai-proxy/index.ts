@@ -212,7 +212,7 @@ serve(async (req) => {
 
     // 4. Check subscription allows proxy access
     const SUBSCRIPTION_LIMITS: Record<string, { aiMonthlyLimit: number }> = {
-      free: { aiMonthlyLimit: 10 },
+      free: { aiMonthlyLimit: 0 },
       student: { aiMonthlyLimit: 100 },
       pro: { aiMonthlyLimit: -1 },
       team: { aiMonthlyLimit: -1 },

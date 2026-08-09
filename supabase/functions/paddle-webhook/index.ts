@@ -9,9 +9,13 @@ const supabase = createClient(
 );
 
 const PRICE_TO_TIER = {
-    [Deno.env.get("PADDLE_PRICE_STUDENT") || "pri_student"]: "student",
-    [Deno.env.get("PADDLE_PRICE_PRO") || "pri_pro"]: "pro",
-    [Deno.env.get("PADDLE_PRICE_TEAM") || "pri_team"]: "team",
+    [Deno.env.get("PADDLE_PRICE_STUDENT") || ""]: "student",
+    [Deno.env.get("PADDLE_PRICE_STUDENT_MONTHLY") || ""]: "student",
+    [Deno.env.get("PADDLE_PRICE_STUDENT_YEARLY") || ""]: "student",
+    [Deno.env.get("PADDLE_PRICE_PRO") || ""]: "pro",
+    [Deno.env.get("PADDLE_PRICE_PRO_MONTHLY") || ""]: "pro",
+    [Deno.env.get("PADDLE_PRICE_PRO_YEARLY") || ""]: "pro",
+    [Deno.env.get("PADDLE_PRICE_TEAM") || ""]: "team",
 };
 
 serve(async (req) => {

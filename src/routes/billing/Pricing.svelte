@@ -17,12 +17,12 @@
         paddleLoading = false;
     });
 
+    let frequency = 'month';
+
     const plans = [
         {
             id: 'free',
             name: 'Free',
-            price: '$0',
-            period: 'forever',
             description: 'Get started with basic task management.',
             features: [
                 { text: '50 tasks / assignments', included: true },
@@ -39,10 +39,11 @@
         {
             id: 'student',
             name: 'Student',
-            price: '$2',
-            period: '/ month',
             description: 'For students who need more AI power and sync.',
-            paddlePriceId: 'PADDLE_PRICE_STUDENT',
+            priceIds: {
+                month: import.meta.env.VITE_PADDLE_PRICE_STUDENT_MONTHLY,
+                year: import.meta.env.VITE_PADDLE_PRICE_STUDENT_YEARLY,
+            },
             features: [
                 { text: 'Unlimited tasks / assignments', included: true },
                 { text: '100 AI analyses / month', included: true },
@@ -59,10 +60,11 @@
         {
             id: 'pro',
             name: 'Pro',
-            price: '$5',
-            period: '/ month',
             description: 'Full access to all features and both modes.',
-            paddlePriceId: 'PADDLE_PRICE_PRO',
+            priceIds: {
+                month: import.meta.env.VITE_PADDLE_PRICE_PRO_MONTHLY,
+                year: import.meta.env.VITE_PADDLE_PRICE_PRO_YEARLY,
+            },
             features: [
                 { text: 'Unlimited tasks / assignments', included: true },
                 { text: 'Unlimited AI analyses', included: true },
@@ -76,12 +78,51 @@
         },
     ];
 
+    let priceMap = {};
+    let priceLoading = true;
+    let priceError = '';
+
+    $: if (paddleInstance && !paddleLoading) {
+        fetchPrices();
+    }
+
+    async function fetchPrices() {
+        const items = [];
+        for (const plan of plans) {
+            if (plan.priceIds) {
+                items.push({ priceId: plan.priceIds.month, quantity: 1 });
+                items.push({ priceId: plan.priceIds.year, quantity: 1 });
+            }
+        }
+
+        priceLoading = true;
+        priceError = '';
+
+        try {
+            const res = await paddleInstance.PricePreview({ items });
+            const map = {};
+            res.data.details.lineItems.forEach(item => {
+                map[item.price.id] = item.formattedTotals.total;
+            });
+            priceMap = map;
+        } catch (err) {
+            console.error('PricePreview failed:', err);
+            priceError = 'Failed to load localized prices.';
+        } finally {
+            priceLoading = false;
+        }
+    }
+
     let loading = false;
     let error = '';
 
     async function handleChoosePlan(plan) {
         if (plan.id === 'free') {
-            view.set('settings');
+            if ($authStore.isGuest) {
+                view.set('auth');
+            } else {
+                view.set('dashboard');
+            }
             return;
         }
 
@@ -104,7 +145,7 @@
 
         try {
             paddleInstance.Checkout.open({
-                items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
+                items: [{ priceId: plan.priceIds[frequency], quantity: 1 }],
                 customer: {
                     email: $authStore.user?.email,
                 },
@@ -113,8 +154,9 @@
                 },
                 settings: {
                     displayMode: 'overlay',
+                    variant: 'one-page',
                     theme: 'light',
-                    successUrl: `${window.location.origin}?checkout=success`,
+                    successUrl: `${window.location.origin}#welcome`,
                 },
             });
         } catch (err) {
@@ -132,10 +174,31 @@
         </button>
         <h2>Choose Your Plan</h2>
         <p class="pricing-subtitle">Start free, upgrade when you need more.</p>
+
+        <div class="frequency-toggle">
+            <button
+                class="toggle-option"
+                class:active={frequency === 'month'}
+                on:click={() => frequency = 'month'}
+            >
+                Monthly
+            </button>
+            <button
+                class="toggle-option"
+                class:active={frequency === 'year'}
+                on:click={() => frequency = 'year'}
+            >
+                Yearly
+            </button>
+        </div>
     </div>
 
     {#if error}
         <div class="alert alert-error">{error}</div>
+    {/if}
+
+    {#if priceError}
+        <div class="alert alert-warning">{priceError}</div>
     {/if}
 
     <div class="plans-grid">
@@ -149,10 +212,19 @@
                 {/if}
 
                 <h3 class="plan-name">{plan.name}</h3>
+
                 <div class="plan-price">
-                    <span class="price-amount">{plan.price}</span>
-                    <span class="price-period">{plan.period}</span>
+                    {#if plan.id === 'free'}
+                        <span class="price-amount">$0</span>
+                        <span class="price-period">forever</span>
+                    {:else if priceMap[plan.priceIds[frequency]]}
+                        <span class="price-amount">{priceMap[plan.priceIds[frequency]]}</span>
+                        <span class="price-period">/{frequency}</span>
+                    {:else}
+                        <span class="price-amount price-loading">…</span>
+                    {/if}
                 </div>
+
                 <p class="plan-desc">{plan.description}</p>
 
                 <ul class="feature-list">
@@ -174,7 +246,11 @@
                     {#if $profile?.subscription === plan.id}
                         Current Plan
                     {:else if plan.id === 'free'}
-                        Downgrade to Free
+                        {#if $authStore.isGuest}
+                            Sign Up Free
+                        {:else}
+                            Go to Dashboard
+                        {/if}
                     {:else if $authStore.isGuest}
                         Sign Up to Subscribe
                     {:else}
@@ -208,10 +284,33 @@
     .pricing-subtitle {
         color: var(--muted);
         font-size: 0.9375rem;
-        margin: 0;
+        margin: 0 0 1rem;
     }
     .back-btn {
         font-size: 0.875rem;
+    }
+    .frequency-toggle {
+        display: inline-flex;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 3px;
+        gap: 2px;
+    }
+    .toggle-option {
+        padding: 0.4rem 1rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.15s ease;
+    }
+    .toggle-option.active {
+        background: var(--primary);
+        color: #fff;
     }
     .plans-grid {
         display: grid;
@@ -263,14 +362,20 @@
         align-items: baseline;
         gap: 0.25rem;
         margin-bottom: 0.5rem;
+        min-height: 2.5rem;
     }
     .price-amount {
         font-size: 2rem;
         font-weight: 700;
     }
+    .price-loading {
+        font-size: 2rem;
+        color: var(--muted);
+    }
     .price-period {
         font-size: 0.875rem;
         color: var(--muted);
+        text-transform: lowercase;
     }
     .plan-desc {
         font-size: 0.8125rem;
@@ -315,6 +420,16 @@
         background: rgba(239, 68, 68, 0.1);
         border: 1px solid rgba(239, 68, 68, 0.2);
         color: #ef4444;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    .alert-warning {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        color: #f59e0b;
         padding: 0.75rem 1rem;
         border-radius: 8px;
         font-size: 0.875rem;
