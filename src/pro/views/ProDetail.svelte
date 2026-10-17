@@ -211,7 +211,7 @@
         <div class="card">
             <!-- Title & Project -->
             <div class="flex justify-between items-start">
-                <h2 style="margin:0">{detail.title}</h2>
+                <h2 class="m-0">{detail.title}</h2>
                 <div class="flex gap-2 items-center">
                     {#if isSharedProject}
                         <span class="tag tag-shared">Shared</span>
@@ -251,8 +251,8 @@
                     <label class="form-label" for="pro-impact">Impact Score</label>
                     <div class="flex items-center gap-2">
                         <input id="pro-impact" type="range" min="1" max="10" bind:value={detail.impactScore} on:change={handleFieldSave}
-                               style="flex:1">
-                        <span style="font-weight:600; font-size:1.125rem; color:var(--primary)">{detail.impactScore || '—'}</span>
+                               class="range-input">
+                        <span class="impact-value">{detail.impactScore || '—'}</span>
                     </div>
                     <p class="text-xs text-muted mt-1">1 = minor task, 10 = critical path</p>
                 </div>
@@ -269,10 +269,10 @@
                     <input id="pro-actual" type="number" class="input" bind:value={detail.actualHours} min="0" step="0.25" on:change={handleFieldSave}>
                     {#if detail.actualHours > 0}
                         <div class="progress-bar mt-2">
-                            <div class="progress-fill" style="width:{getProgress()}%; background:{getProgress() > 100 ? 'var(--danger)' : 'var(--primary)'}"></div>
+                            <div class="progress-fill" style="--progress: {getProgress()}%; --progress-color: {getProgress() > 100 ? 'var(--danger)' : 'var(--primary)'}"></div>
                         </div>
                         {#if getVariance()}
-                            <p class="text-xs mt-1" style="color:{getVariance().color}">{getVariance().text}</p>
+                            <p class="variance-text text-xs mt-1">{getVariance().text}</p>
                         {/if}
                     {/if}
                 </div>
@@ -280,21 +280,20 @@
                 <!-- Priority (computed) -->
                 <div class="detail-card">
                     <strong>Priority Score</strong>
-                    <p style="font-size:1.25rem; font-weight:600; color:var(--primary); margin-top:0.25rem">{detail.priorityScore}</p>
+                    <p class="priority-value">{detail.priorityScore}</p>
                     <p class="text-xs text-muted">{detail.priorityReasoning}</p>
                 </div>
             </div>
 
-            <hr style="border:0; border-top:1px solid var(--border-color); margin: 1.5rem 0;">
+            <hr class="divider">
 
             <!-- Blocker Note -->
             <div class="form-group">
                 <label class="form-label" for="pro-blocker">Blocker Note</label>
-                <textarea id="pro-blocker" class="textarea" bind:value={detail.blockerNote} on:blur={handleBlockerChange}
-                          placeholder="Describe what's blocking this task... (sets status to Blocked)"
-                          style="min-height:80px"></textarea>
+                <textarea id="pro-blocker" class="textarea blocker-textarea" bind:value={detail.blockerNote} on:blur={handleBlockerChange}
+                          placeholder="Describe what's blocking this task... (sets status to Blocked)"></textarea>
                 {#if detail.status === 'blocked'}
-                    <p class="text-xs mt-1" style="color:var(--danger)">🚫 This task is blocked. Clear the note to unblock.</p>
+                    <p class="text-xs mt-1 text-danger">🚫 This task is blocked. Clear the note to unblock.</p>
                 {/if}
             </div>
 
@@ -302,7 +301,7 @@
             {#if detail.description}
                 <div class="form-group">
                     <label class="form-label">Description</label>
-                    <p class="text-sm" style="white-space: pre-wrap;">{detail.description}</p>
+                    <p class="description-text text-sm">{detail.description}</p>
                 </div>
             {/if}
 
@@ -310,7 +309,7 @@
             {#if detail.status === 'done' && detail.estimatedHours > 0 && detail.actualHours > 0}
                 {@const variance = (detail.actualHours - detail.estimatedHours) / detail.estimatedHours * 100}
                 <div class="accuracy-feedback mt-4">
-                    <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Time Accuracy</h3>
+                    <h3 class="accuracy-heading">Time Accuracy</h3>
                     <div class="accuracy-comparison">
                         <div class="accuracy-stat">
                             <span class="accuracy-label">Estimated</span>
@@ -323,7 +322,7 @@
                         </div>
                         <div class="accuracy-stat">
                             <span class="accuracy-label">Variance</span>
-                            <span class="accuracy-value" style="color: {variance > 10 ? 'var(--danger)' : variance < -10 ? 'var(--success)' : 'var(--text-muted)'}">
+                            <span class="accuracy-value variance-text" style="--variance-color: {variance > 10 ? 'var(--danger)' : variance < -10 ? 'var(--success)' : 'var(--text-muted)'}">
                                 {variance > 0 ? '+' : ''}{variance.toFixed(0)}%
                             </span>
                         </div>
@@ -332,7 +331,7 @@
                 </div>
             {/if}
 
-            <hr style="border:0; border-top:1px solid var(--border-color); margin: 1.5rem 0;">
+            <hr class="divider">
 
             <!-- Re-assign Project -->
             <div class="form-group">
@@ -347,10 +346,10 @@
 
             <!-- Comments Section -->
             {#if hasTeam}
-                <hr style="border:0; border-top:1px solid var(--border-color); margin: 1.5rem 0;">
+                <hr class="divider">
 
                 <div class="comments-section">
-                    <h3 style="font-size:1rem; margin-bottom:0.75rem">Comments</h3>
+                    <h3 class="comments-heading">Comments</h3>
 
                     {#if commentsLoading}
                         <p class="text-sm text-muted">Loading comments...</p>
@@ -363,7 +362,7 @@
                                     <div class="comment-header">
                                         <span class="assignee-badge comment-avatar">{comment.authorName.charAt(0).toUpperCase()}</span>
                                         <div>
-                                            <span class="text-sm" style="font-weight:500">{comment.authorName}</span>
+                                            <span class="comment-author text-sm">{comment.authorName}</span>
                                             <span class="text-xs text-light">{timeAgo(comment.createdAt)}</span>
                                         </div>
                                         {#if comment.userId === $profile?.id}
@@ -377,16 +376,15 @@
                     {/if}
 
                     <div class="comment-form mt-3">
-                        <textarea class="textarea" bind:value={newComment}
-                                  placeholder="Add a comment... Use @name to mention"
-                                  style="min-height:60px"></textarea>
+                        <textarea class="textarea comment-textarea" bind:value={newComment}
+                                  placeholder="Add a comment... Use @name to mention"></textarea>
                         <button class="btn btn-primary btn-sm mt-2" on:click={submitComment} disabled={!newComment.trim()}>Post Comment</button>
                     </div>
                 </div>
             {/if}
 
             {#if errorMsg}
-                <div class="text-sm mt-4" style="color: var(--danger); padding: 0.5rem; background: #fee2e2; border-radius:4px;">{errorMsg}</div>
+                <div class="form-error text-sm mt-4">{errorMsg}</div>
             {/if}
         </div>
     </div>
@@ -396,50 +394,60 @@
 <ConfirmModal bind:show={confirmConfig.show} title={confirmConfig.title} message={confirmConfig.message} onConfirm={confirmConfig.onConfirm} />
 
 <style>
-    .animate-fade {
-        animation: fadeIn 0.3s ease;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
     .progress-bar {
         height: 6px;
         background: var(--border-color);
-        border-radius: 3px;
+        border-radius: var(--radius-full);
         overflow: hidden;
     }
     .progress-fill {
         height: 100%;
-        transition: width 0.3s ease;
+        width: var(--progress, 0%);
+        background: var(--progress-color, var(--primary));
+        transition: var(--transition-slow);
     }
-    .tag-shared {
-        background: rgba(var(--primary-rgb, 79, 70, 229), 0.15);
-        color: var(--primary);
-        padding: 0.25rem 0.625rem;
-        border-radius: 99px;
-        font-size: 0.75rem;
-        font-weight: 500;
+    .range-input {
+        flex: 1;
     }
-    .assignee-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: var(--primary);
-        color: white;
-        font-size: 0.625rem;
+    .impact-value {
         font-weight: 600;
-        flex-shrink: 0;
+        font-size: var(--fs-lg);
+        color: var(--primary);
+    }
+    .priority-value {
+        font-size: var(--fs-xl);
+        font-weight: 600;
+        color: var(--primary);
+        margin-top: var(--space-1);
+    }
+    .variance-text {
+        color: var(--variance-color, var(--text-muted));
+    }
+    .divider {
+        border: 0;
+        border-top: 1px solid var(--border-color);
+        margin: var(--space-6) 0;
+    }
+    .blocker-textarea {
+        min-height: 80px;
+    }
+    .description-text {
+        white-space: pre-wrap;
+    }
+    .accuracy-heading {
+        font-size: var(--fs-md);
+        margin-bottom: var(--space-2);
+    }
+    .comments-heading {
+        font-size: var(--fs-md);
+        margin-bottom: var(--space-3);
     }
     .comments-list {
         max-height: 400px;
         overflow-y: auto;
     }
     .comment-item {
-        padding: 0.75rem 0;
+        padding: var(--space-3) 0;
         border-bottom: 1px solid var(--border-color);
     }
     .comment-item:last-child {
@@ -448,23 +456,29 @@
     .comment-header {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 0.375rem;
+        gap: var(--space-2);
+        margin-bottom: var(--space-2);
     }
     .comment-avatar {
         width: 28px;
         height: 28px;
-        font-size: 0.75rem;
+        font-size: var(--fs-xs);
     }
     .comment-body {
         white-space: pre-wrap;
-        margin-left: 2.25rem;
+        margin-left: calc(28px + var(--space-2));
         color: var(--text-main);
+    }
+    .comment-author {
+        font-weight: 500;
+    }
+    .comment-textarea {
+        min-height: 60px;
     }
     .comment-delete {
         margin-left: auto;
-        padding: 0.125rem 0.375rem;
-        font-size: 0.75rem;
+        padding: var(--space-1) var(--space-2);
+        font-size: var(--fs-xs);
         color: var(--text-light);
         background: none;
         border: none;
@@ -472,9 +486,5 @@
     }
     .comment-delete:hover {
         color: var(--danger);
-    }
-    .btn-sm {
-        padding: 0.25rem 0.75rem;
-        font-size: 0.75rem;
     }
 </style>

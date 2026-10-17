@@ -107,7 +107,7 @@
 <div class="auth-container animate-fade">
     <div class="auth-card">
         <div class="auth-logo">
-            <span class="logo-icon">⚡</span>
+            <span class="logo-icon" aria-hidden="true">⚡</span>
             <h2>Clerify</h2>
         </div>
         
@@ -208,8 +208,8 @@
             </div>
 
             <div class="oauth-buttons">
-                <button type="button" class="btn btn-outline" on:click={() => handleOAuth('google')} disabled={loading}>
-                    <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+                <button type="button" class="btn btn-outline flex items-center justify-center gap-2" on:click={() => handleOAuth('google')} disabled={loading}>
+                    <svg class="svg-icon" viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
@@ -218,8 +218,8 @@
                     Google
                 </button>
                 
-                <button type="button" class="btn btn-outline" on:click={() => handleOAuth('github')} disabled={loading}>
-                    <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                <button type="button" class="btn btn-outline flex items-center justify-center gap-2" on:click={() => handleOAuth('github')} disabled={loading}>
+                    <svg class="svg-icon" viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
                         <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
                     </svg>
                     GitHub
@@ -252,13 +252,13 @@
         justify-content: center;
         align-items: center;
         min-height: calc(100vh - 120px);
-        padding: 2rem 1rem;
+        padding: var(--space-8) var(--space-4);
     }
     .auth-card {
-        background: var(--bg-card);
+        background: var(--surface-color);
         border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 2.5rem;
+        border-radius: var(--radius-lg);
+        padding: var(--space-10);
         width: 100%;
         max-width: 440px;
         box-shadow: var(--shadow-lg);
@@ -266,35 +266,47 @@
     .auth-logo {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: var(--space-2);
         justify-content: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: var(--space-6);
     }
     .logo-icon {
-        font-size: 1.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius);
+        background: var(--primary-surface);
+        font-size: var(--fs-lg);
+        line-height: 1;
     }
     .auth-logo h2 {
-        font-size: 1.75rem;
+        font-family: var(--font-display);
+        font-size: var(--fs-2xl);
         font-weight: 700;
         margin: 0;
         letter-spacing: -0.025em;
+        color: var(--text-main);
     }
     .auth-card h3 {
-        font-size: 1.25rem;
+        font-family: var(--font-display);
+        font-size: var(--fs-xl);
         font-weight: 600;
         text-align: center;
-        margin: 0 0 0.5rem 0;
+        margin: 0 0 var(--space-2) 0;
+        color: var(--text-main);
     }
     .auth-subtitle {
-        color: var(--muted);
+        color: var(--text-muted);
         text-align: center;
-        font-size: 0.875rem;
-        margin: 0 0 2rem 0;
+        font-size: var(--fs-base);
+        margin: 0 0 var(--space-8) 0;
     }
     .auth-form {
         display: flex;
         flex-direction: column;
-        gap: 1.25rem;
+        gap: var(--space-5);
     }
     .label-row {
         display: flex;
@@ -305,21 +317,23 @@
         background: none;
         border: none;
         color: var(--primary);
-        font-size: 0.875rem;
+        font-size: var(--fs-base);
         font-weight: 500;
         cursor: pointer;
         padding: 0;
+        transition: color var(--transition-fast);
     }
     .text-link:hover {
         text-decoration: underline;
+        color: var(--primary-hover);
     }
     .divider {
         display: flex;
         align-items: center;
         text-align: center;
-        margin: 1.5rem 0;
-        color: var(--muted);
-        font-size: 0.75rem;
+        margin: var(--space-6) 0;
+        color: var(--text-muted);
+        font-size: var(--fs-xs);
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
@@ -329,63 +343,64 @@
         border-bottom: 1px solid var(--border-color);
     }
     .divider span {
-        padding: 0 10px;
+        padding: 0 var(--space-2);
     }
     .oauth-buttons {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 0.75rem;
+        gap: var(--space-3);
     }
     .btn-block {
-        width: 100%;
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 42px;
+        width: 100%;
+        height: 44px;
     }
     .auth-footer {
-        margin-top: 1.5rem;
+        margin-top: var(--space-6);
         text-align: center;
-        font-size: 0.875rem;
-        color: var(--muted);
+        font-size: var(--fs-base);
+        color: var(--text-muted);
     }
     .free-badge {
-        font-size: 0.75rem;
+        font-size: var(--fs-xs);
         color: var(--primary);
         font-weight: 500;
         background: rgba(var(--primary-rgb), 0.1);
-        padding: 0.5rem;
-        border-radius: 6px;
+        border: 1px solid rgba(var(--primary-rgb), 0.15);
+        padding: var(--space-2);
+        border-radius: var(--radius-sm);
         display: inline-block;
     }
     .alert {
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        margin-bottom: 1.25rem;
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius);
+        font-size: var(--fs-base);
+        margin-bottom: var(--space-5);
         line-height: 1.4;
     }
     .alert-error {
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.2);
-        color: #ef4444;
+        background: var(--danger-surface);
+        border: 1px solid var(--danger);
+        color: var(--danger);
     }
     .alert-success {
-        background: rgba(16, 185, 129, 0.1);
-        border: 1px solid rgba(16, 185, 129, 0.2);
-        color: #10b981;
+        background: var(--success-surface);
+        border: 1px solid var(--success);
+        color: var(--success);
     }
     .spinner-sm {
         width: 16px;
         height: 16px;
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        border-radius: 50%;
-        border-top-color: #fff;
+        border: 2px solid transparent;
+        border-right-color: currentColor;
+        border-top-color: currentColor;
+        border-radius: var(--radius-full);
         animation: spin 0.8s linear infinite;
     }
     @keyframes spin {
         to { transform: rotate(360deg); }
     }
-    .ml-1 { margin-left: 0.25rem; }
-    .mt-4 { margin-top: 1rem; }
+    .ml-1 { margin-left: var(--space-1); }
 </style>

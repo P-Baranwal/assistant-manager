@@ -4,20 +4,25 @@
 </script>
 
 {#if show}
-<div class="overlay transition-fade">
-    <div class="flex flex-col items-center gap-4" style="color: white;">
+<div class="overlay">
+    <div class="spinner-stack">
         <div class="spinner"></div>
-        <h3>{text}</h3>
+        <h3 class="spinner-text">{text}</h3>
     </div>
 </div>
 {/if}
 
 <style>
-    .transition-fade {
-        animation: fadeIn 0.2s ease-out;
+    .spinner-stack {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
     }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+    .spinner-text {
+        color: #fff;
+        font-weight: 500;
+        font-size: var(--fs-lg);
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
     }
 </style>

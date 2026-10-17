@@ -79,8 +79,8 @@
         {/if}
         {#if hasTeam}
             <div class="notification-wrapper">
-                <button class="btn btn-ghost notification-bell" on:click={toggleNotifications} title="Notifications">
-                    <svg class="svg-icon" viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+                <button class="btn btn-ghost notification-bell" on:click={toggleNotifications} title="Notifications" aria-haspopup="true" aria-expanded={showNotifications}>
+                    <svg class="svg-icon notif-bell-icon" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
                     {#if $unreadNotifications > 0}
                         <span class="notif-badge">{$unreadNotifications}</span>
                     {/if}
@@ -94,11 +94,11 @@
                             {/if}
                         </div>
                         {#if $notifications.length === 0}
-                            <p class="text-sm text-muted" style="padding:1rem; text-align:center">No notifications</p>
+                            <p class="text-sm text-muted text-center notif-empty">No notifications</p>
                         {:else}
                             {#each $notifications.slice(0, 20) as notif}
                                 <div class="notif-item" class:unread={!notif.read_at}>
-                                    <div class="text-sm" style="font-weight:500">{notif.title}</div>
+                                    <div class="text-sm notif-title">{notif.title}</div>
                                     {#if notif.body}
                                         <div class="text-xs text-muted">{notif.body}</div>
                                     {/if}
@@ -127,11 +127,28 @@
 </header>
 
 <style>
+    header {
+        gap: var(--space-4);
+    }
+    .stat-bar {
+        gap: var(--space-6);
+        flex-wrap: wrap;
+        row-gap: var(--space-3);
+    }
+    .header-actions {
+        gap: var(--space-3);
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
     .notification-wrapper {
         position: relative;
     }
     .notification-bell {
         position: relative;
+    }
+    .notif-bell-icon {
+        width: 20px;
+        height: 20px;
     }
     .notif-badge {
         position: absolute;
@@ -139,15 +156,15 @@
         right: 2px;
         background: var(--danger);
         color: white;
-        font-size: 0.5625rem;
-        min-width: 16px;
-        height: 16px;
-        border-radius: 99px;
+        font-size: var(--fs-xs);
+        font-weight: 600;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 var(--space-1);
+        border-radius: var(--radius-full);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 600;
-        padding: 0 4px;
     }
     .notification-dropdown {
         position: absolute;
@@ -156,22 +173,22 @@
         width: 320px;
         max-height: 400px;
         overflow-y: auto;
-        background: var(--surface-color);
+        background: var(--surface-raised);
         border: 1px solid var(--border-color);
         border-radius: var(--radius);
-        box-shadow: var(--shadow-md);
+        box-shadow: var(--shadow-lg);
         z-index: 100;
-        margin-top: 0.5rem;
+        margin-top: var(--space-2);
     }
     .notif-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 0.75rem 1rem;
+        padding: var(--space-3) var(--space-4);
         border-bottom: 1px solid var(--border-color);
     }
     .notif-item {
-        padding: 0.625rem 1rem;
+        padding: var(--space-3) var(--space-4);
         border-bottom: 1px solid var(--border-color);
     }
     .notif-item:last-child {
@@ -179,9 +196,22 @@
     }
     .notif-item.unread {
         background: var(--primary-surface);
+        box-shadow: inset 3px 0 0 var(--primary);
     }
-    .btn-sm {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.6875rem;
+    .notif-title {
+        font-weight: 500;
+    }
+    .notif-empty {
+        padding: var(--space-4);
+    }
+    @media (max-width: 860px) {
+        header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: var(--space-4);
+        }
+        .header-actions {
+            justify-content: flex-start;
+        }
     }
 </style>

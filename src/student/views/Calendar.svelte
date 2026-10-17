@@ -152,41 +152,33 @@
 </div>
 
 <style>
-    .fade-in {
-        animation: fadeIn 0.3s ease;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-
     .calendar-layout {
         display: flex;
-        gap: 1.5rem;
+        gap: var(--space-6);
         height: calc(100vh - 120px);
         align-items: flex-start;
     }
 
     .calendar-main {
         flex: 1;
-        background: var(--surface);
+        background: var(--surface-color);
+        border: 1px solid var(--border-color);
         border-radius: var(--radius);
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        padding: var(--space-6);
         display: flex;
         flex-direction: column;
-        border: 1px solid var(--border-color);
         min-height: 100%;
         overflow: hidden;
     }
 
     .calendar-sidebar {
         width: 300px;
-        background: var(--surface);
-        border-radius: var(--radius);
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-        padding: 1.5rem;
+        background: var(--surface-color);
         border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        padding: var(--space-6);
         display: flex;
         flex-direction: column;
         max-height: 100%;
@@ -195,13 +187,13 @@
 
     .sidebar-title {
         margin: 0;
-        font-size: 1.1rem;
+        font-size: var(--fs-lg);
         border-bottom: 1px solid var(--border-color);
-        padding-bottom: 0.5rem;
+        padding-bottom: var(--space-2);
     }
 
     .empty-msg {
-        margin-top: 1rem;
+        margin-top: var(--space-4);
     }
 
     .calendar-grid {
@@ -217,49 +209,49 @@
     }
 
     .grid-header {
-        background: var(--bg);
-        padding: 0.5rem;
+        background: var(--bg-subtle);
+        padding: var(--space-2);
     }
 
     .grid-cell {
-        background: var(--surface);
-        padding: 0.5rem;
+        background: var(--surface-color);
+        padding: var(--space-2);
         display: flex;
         flex-direction: column;
         overflow: hidden;
     }
 
     .grid-cell.empty {
-        background: var(--bg);
+        background: var(--bg-subtle);
     }
 
     .grid-cell.today {
-        background: var(--bg);
+        background: var(--bg-subtle);
     }
 
     .grid-cell.today .date-number {
         background: var(--primary);
-        color: white;
-        border-radius: 50%;
+        color: var(--text-on-primary);
+        border-radius: var(--radius-full);
         width: 24px;
         height: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
+        font-weight: 700;
     }
 
     .date-number {
-        font-size: 0.85rem;
+        font-size: var(--fs-sm);
         color: var(--text-muted);
-        margin-bottom: 0.5rem;
+        margin-bottom: var(--space-2);
         align-self: flex-start;
     }
 
     .chips-container {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: var(--space-1);
         overflow-y: auto;
         padding-right: 2px;
     }
@@ -269,18 +261,18 @@
     }
     .chips-container::-webkit-scrollbar-thumb {
         background: var(--border-color);
-        border-radius: 4px;
+        border-radius: var(--radius-xs);
     }
 
     .item-chip {
-        font-size: 0.75rem;
-        padding: 2px 6px;
-        border-radius: 4px;
+        font-size: var(--fs-xs);
+        padding: 2px var(--space-2);
+        border-radius: var(--radius-xs);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         cursor: pointer;
-        transition: opacity 0.2s;
+        transition: opacity var(--transition-fast);
     }
 
     .item-chip:hover {
@@ -288,22 +280,22 @@
     }
 
     .assignment-chip {
-        background: rgba(59, 130, 246, 0.15); /* light blue */
+        background: rgba(var(--primary-rgb), 0.15);
         color: var(--primary);
-        border: 1px solid rgba(59, 130, 246, 0.3);
+        border: 1px solid rgba(var(--primary-rgb), 0.3);
     }
 
     .task-chip {
-        background: var(--bg);
-        color: var(--text);
+        background: var(--bg-subtle);
+        color: var(--text-main);
         border: 1px solid var(--border-color);
     }
 
     .item-chip.overdue {
-        background: rgba(239, 68, 68, 0.15);
-        color: var(--danger, #ef4444);
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        font-weight: bold;
+        background: var(--danger-surface);
+        color: var(--danger);
+        border: 1px solid var(--danger);
+        font-weight: 700;
     }
 
     .item-chip.completed {
@@ -315,18 +307,18 @@
     }
 
     .undated-card {
-        padding: 0.75rem;
+        padding: var(--space-3);
         border: 1px solid var(--border-color);
         border-radius: var(--radius);
-        background: var(--bg);
-        margin-bottom: 0.5rem;
+        background: var(--bg-subtle);
+        margin-bottom: var(--space-2);
         cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
+        transition: transform var(--transition), box-shadow var(--transition);
     }
 
     .undated-card:hover {
         transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        box-shadow: var(--shadow-sm);
     }
 
     .undated-card.completed {

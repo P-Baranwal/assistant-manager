@@ -15,7 +15,7 @@
 </script>
 
 <div class="upgrade-gate animate-fade">
-    <div class="gate-icon">🔒</div>
+    <div class="gate-icon" aria-hidden="true">🔒</div>
     <h3 class="gate-title">{feature}</h3>
     <p class="gate-desc">
         {#if $authStore.isGuest}
@@ -35,32 +35,26 @@
         flex-direction: column;
         align-items: center;
         text-align: center;
-        padding: 2rem 1.5rem;
-        background: var(--bg-card);
-        border: 1px dashed var(--border-color);
-        border-radius: 12px;
-        gap: 0.75rem;
+        padding: var(--space-8) var(--space-6);
+        background: var(--surface-color);
+        border: 1px dashed var(--border-strong);
+        border-radius: var(--radius-lg);
+        gap: var(--space-3);
     }
     .gate-icon {
-        font-size: 2rem;
-        opacity: 0.6;
+        font-size: var(--fs-2xl);
+        line-height: 1;
+        opacity: 0.7;
     }
     .gate-title {
-        font-size: 1.1rem;
+        font-size: var(--fs-lg);
         font-weight: 600;
         margin: 0;
     }
     .gate-desc {
-        font-size: 0.875rem;
-        color: var(--muted);
+        font-size: var(--fs-base);
+        color: var(--text-muted);
         margin: 0;
         max-width: 320px;
-    }
-    .animate-fade {
-        animation: fadeIn 0.3s ease;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
     }
 </style>

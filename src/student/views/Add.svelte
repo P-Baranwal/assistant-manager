@@ -153,7 +153,7 @@
 </script>
 
 <div class="flex justify-between items-center mb-4">
-    <h2>Add Assignment</h2>
+    <h2 class="m-0">Add Assignment</h2>
     <button class="btn" on:click={() => view.set('dashboard')}>Cancel</button>
 </div>
 
@@ -175,7 +175,7 @@
                 <textarea id="paste-input" aria-label="paste content" class="textarea" bind:value={pasteText} placeholder="Paste the full assignment prompt or description here..."></textarea>
                 <div class="form-group mt-4 mb-0">
                     <label class="form-label" for="paste-notes">Extra Notes for AI</label>
-                    <textarea id="paste-notes" class="textarea" bind:value={pasteNotes} style="min-height:80px" placeholder="Anything else the AI should know — special requirements, grading criteria, etc."></textarea>
+                    <textarea id="paste-notes" class="textarea textarea-sm" bind:value={pasteNotes} placeholder="Anything else the AI should know — special requirements, grading criteria, etc."></textarea>
                 </div>
                 <button class="btn btn-primary mt-4" on:click={analyze} disabled={!pasteText.trim()}>Analyze & Preview</button>
             </div>
@@ -184,12 +184,12 @@
         {#if currentTab === 'upload'}
             <div class="tab-content">
                 <div class="upload-zone card">
-                    <input type="file" bind:this={fileInputRef} on:change={handleFileChange} accept="application/pdf" style="display:none" aria-label="upload pdf">
+                    <input type="file" class="hidden" bind:this={fileInputRef} on:change={handleFileChange} accept="application/pdf" aria-label="upload pdf">
                     {#if !uploadFile}
                         <div class="upload-zone-inner">
-                            <svg class="svg-icon" style="width:40px;height:40px;margin-bottom:0.75rem;color:var(--text-muted)" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
-                            <p class="text-sm" style="font-weight:500">Drop a PDF here or</p>
-                            <button class="btn btn-primary mt-2" on:click={() => fileInputRef.click()} style="font-size:0.8125rem">
+                            <svg class="svg-icon upload-icon text-muted" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
+                            <p class="text-sm fw-medium">Drop a PDF here or</p>
+                            <button class="btn btn-primary mt-2" on:click={() => fileInputRef.click()}>
                                 Choose PDF File
                             </button>
                             <p class="text-xs text-muted mt-2">Requires internet for PDF parsing library</p>
@@ -197,9 +197,9 @@
                     {:else}
                         <div class="upload-zone-selected">
                             <div class="upload-file-badge">
-                                <svg class="svg-icon" style="width:20px;height:20px;flex-shrink:0" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
-                                <span class="text-sm" style="font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{uploadFile.name}</span>
-                                <button class="btn" on:click={clearFile} style="padding:0.25rem 0.5rem;font-size:0.75rem">✕ Remove</button>
+                                <svg class="svg-icon badge-icon" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
+                                <span class="text-sm fw-medium truncate flex-1">{uploadFile.name}</span>
+                                <button class="btn btn-sm" on:click={clearFile}>✕ Remove</button>
                             </div>
                         </div>
                     {/if}
@@ -207,8 +207,8 @@
 
                 <div class="upload-context-section mt-4">
                     <div class="upload-context-header mb-2 flex items-center gap-2">
-                        <svg class="svg-icon" style="width:18px;height:18px" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-                        <span style="font-weight:500">Additional Context <span class="text-xs text-muted">(helps AI accuracy)</span></span>
+                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                        <span class="fw-medium">Additional Context <span class="text-xs text-muted">(helps AI accuracy)</span></span>
                     </div>
                     <div class="upload-context-grid">
                         <div class="form-group mb-0">
@@ -234,11 +234,11 @@
                     </div>
                     <div class="form-group mt-4 mb-0">
                         <label class="form-label" for="upload-notes">Extra Notes for AI</label>
-                        <textarea id="upload-notes" class="textarea" bind:value={uploadNotes} style="min-height:80px" placeholder="Anything else the AI should know..."></textarea>
+                        <textarea id="upload-notes" class="textarea textarea-sm" bind:value={uploadNotes} placeholder="Anything else the AI should know..."></textarea>
                     </div>
                 </div>
 
-                <button class="btn btn-primary mt-4 w-full justify-center" on:click={analyze} disabled={!uploadFile} style="padding:0.75rem">
+                <button class="btn btn-primary mt-4 w-full justify-center" on:click={analyze} disabled={!uploadFile}>
                     Analyze PDF & Context
                 </button>
             </div>
@@ -277,7 +277,7 @@
     </div>
 {:else}
     <div id="add-preview-state" class="animate-fade">
-        <div class="card" style="border-color: var(--primary);">
+        <div class="card card-static card-highlight">
             <div class="text-sm text-muted mb-2">Preview & Edit</div>
             <div class="form-group">
                 <label class="form-label" for="draft-title">Title</label>
@@ -297,7 +297,7 @@
                 </div>
             </div>
             
-            <div class="detail-meta-grid" style="margin: 0.5rem 0;">
+            <div class="detail-meta-grid meta-tight">
                 <div class="detail-card text-sm">
                     <strong>Difficulty: <span>{draft.difficulty}</span>/10</strong>
                     <p class="text-muted mt-1">{draft.difficultyReasoning}</p>
@@ -314,11 +314,11 @@
 
             <div class="form-group mt-4">
                 <label class="form-label" for="draft-check">Checklist Items (Edit one per line)</label>
-                <textarea id="draft-check" class="textarea" bind:value={draft.checklistText} style="min-height: 150px; font-family: monospace;"></textarea>
+                <textarea id="draft-check" class="textarea textarea-code" bind:value={draft.checklistText}></textarea>
             </div>
             
             {#if errorMsg}
-                <div class="text-sm mb-4 p-2 rounded" style="color: var(--danger); background: #fee2e2;">{errorMsg}</div>
+                <div class="error-box text-sm mb-4">{errorMsg}</div>
             {/if}
 
             <div class="flex gap-2 justify-end">
@@ -332,14 +332,45 @@
 <Spinner bind:show={processing} text={spinnerText} />
 
 <style>
-    .animate-fade {
-        animation: fadeIn 0.3s ease;
+    .flex-1 {
+        flex: 1;
     }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+    .fw-medium {
+        font-weight: 500;
     }
-    .w-full { width: 100%; }
-    .flex-1 { flex: 1; }
-    .mb-0 { margin-bottom: 0; }
+    .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+    }
+    .textarea-sm {
+        min-height: 80px;
+    }
+    .textarea-code {
+        min-height: 150px;
+        font-family: monospace;
+    }
+    .upload-icon {
+        width: 40px;
+        height: 40px;
+        margin-bottom: var(--space-3);
+    }
+    .badge-icon {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+    .card-highlight {
+        border-color: var(--primary);
+    }
+    .meta-tight {
+        margin: var(--space-2) 0;
+    }
+    .error-box {
+        color: var(--danger);
+        background: var(--danger-surface);
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-sm);
+    }
 </style>

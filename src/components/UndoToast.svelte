@@ -30,14 +30,13 @@
         align-items: center;
         gap: 0.75rem;
         padding: 0.75rem 1.25rem;
-        background: var(--surface-color, #1e293b);
-        color: var(--text-main, #f1f5f9);
-        border: 1px solid var(--border-color, #334155);
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+        background: var(--surface-raised);
+        color: var(--text-main);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
         z-index: 10000;
-        animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        backdrop-filter: blur(12px);
+        animation: slideUp 0.3s var(--ease);
         max-width: 90vw;
     }
 
@@ -47,7 +46,7 @@
     }
 
     .undo-label {
-        font-size: 0.875rem;
+        font-size: var(--fs-base);
         font-weight: 500;
         white-space: nowrap;
         overflow: hidden;
@@ -56,20 +55,19 @@
     }
 
     .undo-btn {
-        background: var(--primary, #3b82f6);
-        color: white;
+        background: var(--primary);
+        color: var(--text-on-primary);
         border: none;
-        border-radius: 8px;
+        border-radius: var(--radius-sm);
         padding: 0.375rem 0.875rem;
-        font-size: 0.8125rem;
+        font-size: var(--fs-sm);
         font-weight: 600;
         cursor: pointer;
-        transition: background 0.15s, transform 0.1s;
+        transition: var(--transition-fast);
         white-space: nowrap;
     }
     .undo-btn:hover:not(:disabled) {
-        background: var(--primary-hover, #2563eb);
-        transform: scale(1.02);
+        background: var(--primary-hover);
     }
     .undo-btn:disabled {
         opacity: 0.6;
@@ -79,14 +77,14 @@
     .undo-dismiss {
         background: none;
         border: none;
-        color: var(--text-muted, #94a3b8);
+        color: var(--text-muted);
         cursor: pointer;
-        font-size: 0.875rem;
+        font-size: var(--fs-base);
         padding: 0.25rem;
         line-height: 1;
-        transition: color 0.15s;
+        transition: color var(--transition-fast);
     }
     .undo-dismiss:hover {
-        color: var(--text-main, #f1f5f9);
+        color: var(--text-main);
     }
 </style>

@@ -278,141 +278,160 @@
     .pricing-container {
         max-width: 960px;
         margin: 0 auto;
-        padding: 1.5rem 1rem 3rem;
+        padding: var(--space-6) var(--space-4) var(--space-12);
     }
     .pricing-header {
         text-align: center;
-        margin-bottom: 2rem;
+        margin-bottom: var(--space-8);
     }
     .pricing-header h2 {
-        font-size: 1.75rem;
+        font-family: var(--font-display);
+        font-size: var(--fs-2xl);
         font-weight: 700;
-        margin: 0.5rem 0 0.25rem;
+        margin: var(--space-2) 0 var(--space-1);
+        color: var(--text-main);
+        letter-spacing: -0.025em;
     }
     .pricing-subtitle {
-        color: var(--muted);
-        font-size: 0.9375rem;
-        margin: 0 0 1rem;
+        color: var(--text-muted);
+        font-size: var(--fs-md);
+        margin: 0 0 var(--space-4);
     }
     .back-btn {
-        font-size: 0.875rem;
+        font-size: var(--fs-base);
     }
     .frequency-toggle {
         display: inline-flex;
-        background: var(--bg-card);
+        background: var(--surface-2);
         border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 3px;
-        gap: 2px;
+        border-radius: var(--radius);
+        padding: var(--space-1);
+        gap: var(--space-1);
     }
     .toggle-option {
-        padding: 0.4rem 1rem;
-        font-size: 0.8125rem;
+        padding: var(--space-2) var(--space-4);
+        font-size: var(--fs-sm);
         font-weight: 500;
         border: none;
         background: transparent;
-        color: var(--muted);
+        color: var(--text-muted);
         cursor: pointer;
-        border-radius: 6px;
-        transition: all 0.15s ease;
+        border-radius: var(--radius-sm);
+        transition: var(--transition-fast);
+    }
+    .toggle-option:hover {
+        color: var(--text-main);
     }
     .toggle-option.active {
         background: var(--primary);
-        color: #fff;
+        color: var(--text-on-primary);
     }
     .plans-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 1.25rem;
-        margin-bottom: 2rem;
+        gap: var(--space-5);
+        margin-bottom: var(--space-8);
     }
     .plan-card {
         position: relative;
-        background: var(--bg-card);
+        background: var(--surface-color);
         border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 1.75rem 1.5rem;
+        border-radius: var(--radius-lg);
+        padding: var(--space-6) var(--space-5);
         display: flex;
         flex-direction: column;
+        transition: var(--transition);
+    }
+    .plan-card:hover {
+        box-shadow: var(--shadow-md);
     }
     .plan-card.highlight {
         border-color: var(--primary);
-        box-shadow: 0 0 0 1px var(--primary);
+        box-shadow: var(--shadow-md), 0 0 0 1px var(--primary);
     }
     .popular-badge, .current-badge {
         position: absolute;
         top: -0.625rem;
         left: 50%;
         transform: translateX(-50%);
-        font-size: 0.6875rem;
+        font-size: var(--fs-xs);
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        padding: 0.2rem 0.75rem;
-        border-radius: 999px;
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-full);
         white-space: nowrap;
     }
     .popular-badge {
         background: var(--primary);
-        color: #fff;
+        color: var(--text-on-primary);
     }
     .current-badge {
-        background: var(--success, #10b981);
-        color: #fff;
+        background: var(--success);
+        color: var(--text-on-primary);
     }
     .plan-name {
-        font-size: 1.125rem;
+        font-family: var(--font-display);
+        font-size: var(--fs-lg);
         font-weight: 600;
-        margin: 0 0 0.5rem;
+        margin: 0 0 var(--space-2);
+        color: var(--text-main);
     }
     .plan-price {
         display: flex;
         align-items: baseline;
-        gap: 0.25rem;
-        margin-bottom: 0.5rem;
-        min-height: 2.5rem;
+        gap: var(--space-1);
+        margin-bottom: var(--space-2);
+        min-height: var(--space-10);
     }
     .price-amount {
-        font-size: 2rem;
+        font-family: var(--font-display);
+        font-size: var(--fs-2xl);
         font-weight: 700;
+        color: var(--text-main);
     }
     .price-loading {
-        font-size: 2rem;
-        color: var(--muted);
+        font-size: var(--fs-2xl);
+        color: var(--text-muted);
     }
     .price-period {
-        font-size: 0.875rem;
-        color: var(--muted);
+        font-size: var(--fs-base);
+        color: var(--text-muted);
         text-transform: lowercase;
     }
     .plan-desc {
-        font-size: 0.8125rem;
-        color: var(--muted);
-        margin: 0 0 1.25rem;
+        font-size: var(--fs-sm);
+        color: var(--text-muted);
+        margin: 0 0 var(--space-5);
         line-height: 1.5;
     }
     .feature-list {
         list-style: none;
         padding: 0;
-        margin: 0 0 1.5rem;
+        margin: 0 0 var(--space-6);
         flex: 1;
     }
     .feature-list li {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        font-size: 0.8125rem;
-        padding: 0.35rem 0;
+        gap: var(--space-2);
+        font-size: var(--fs-sm);
+        padding: var(--space-1) 0;
+        color: var(--text-main);
     }
     .feature-list li.excluded {
-        color: var(--muted);
-        opacity: 0.5;
+        color: var(--text-muted);
+        opacity: 0.6;
     }
     .feature-icon {
-        font-size: 0.75rem;
+        font-size: var(--fs-xs);
         width: 1rem;
         text-align: center;
         flex-shrink: 0;
+        color: var(--success);
+    }
+    .feature-list li.excluded .feature-icon {
+        color: var(--text-light);
     }
     .plan-btn {
         width: 100%;
@@ -420,36 +439,26 @@
     }
     .pricing-note {
         text-align: center;
-        font-size: 0.8125rem;
-        color: var(--muted);
+        font-size: var(--fs-sm);
+        color: var(--text-muted);
     }
     .pricing-note p { margin: 0; }
-    .alert-error {
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.2);
-        color: #ef4444;
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        margin-bottom: 1.5rem;
+    .alert {
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius);
+        font-size: var(--fs-base);
+        margin-bottom: var(--space-6);
         text-align: center;
+    }
+    .alert-error {
+        background: var(--danger-surface);
+        border: 1px solid var(--danger);
+        color: var(--danger);
     }
     .alert-warning {
-        background: rgba(245, 158, 11, 0.1);
-        border: 1px solid rgba(245, 158, 11, 0.2);
-        color: #f59e0b;
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        margin-bottom: 1.5rem;
-        text-align: center;
-    }
-    .animate-fade {
-        animation: fadeIn 0.3s ease;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
+        background: var(--warning-surface);
+        border: 1px solid var(--warning);
+        color: var(--warning);
     }
     @media (max-width: 700px) {
         .plans-grid {

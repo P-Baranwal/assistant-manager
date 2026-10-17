@@ -435,7 +435,7 @@
 
 <div class="flex justify-between items-center mb-4">
     <h2>Settings</h2>
-    <button class="btn" on:click={() => view.set('dashboard')}>Cancel</button>
+    <button class="btn btn-ghost" on:click={() => view.set('dashboard')}>Cancel</button>
 </div>
 
 <div class="card mb-4 animate-fade">
@@ -443,10 +443,10 @@
     <div class="form-group mb-4">
         <label class="form-label">Interface Mode</label>
         <div class="flex flex-col gap-2 mt-2">
-            <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+            <label class="radio-option flex items-center gap-2 text-sm">
                 <input type="radio" value="student" bind:group={p.mode}> Student Mode (Assignment Focus)
             </label>
-            <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+            <label class="radio-option flex items-center gap-2 text-sm">
                 <input type="radio" value="professional" bind:group={p.mode} disabled={!canAccessProMode}> Professional Mode (Project/Kanban Focus)
                 {#if !canAccessProMode}
                     <span class="upgrade-hint">
@@ -458,7 +458,7 @@
     </div>
     
     {#if p.mode === 'professional'}
-        <div class="form-group mb-0 pt-4" style="border-top:1px solid var(--border-color)">
+        <div class="form-group mb-0 pt-4 divider-top">
             <label class="form-label" for="default-project">Default Project (for newly created tasks)</label>
             <select id="default-project" class="input" bind:value={p.defaultProjectId}>
                 <option value={null}>None (Send to Inbox)</option>
@@ -527,10 +527,10 @@
         <div class="form-group">
             <label class="form-label">AI Mode</label>
             <div class="flex flex-col gap-2 mt-2">
-                <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                <label class="radio-option flex items-center gap-2 text-sm">
                     <input type="radio" value={true} bind:group={p.useProxy}> Use Clerify AI (included in plan)
                 </label>
-                <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                <label class="radio-option flex items-center gap-2 text-sm">
                     <input type="radio" value={false} bind:group={p.useProxy}> Use my own API key (BYOK)
                 </label>
             </div>
@@ -545,7 +545,7 @@
     {:else if !LOCAL_ONLY}
         <div class="proxy-locked mb-3">
             <div class="flex items-center gap-2 mb-2">
-                <span class="text-sm" style="font-weight:500;">🔒 Clerify AI Proxy</span>
+                <span class="text-sm font-bold">🔒 Clerify AI Proxy</span>
                 <span class="badge badge-pro">Student+</span>
             </div>
             <p class="text-xs text-muted mb-2">Sign in and upgrade to use Clerify AI — no API key required.</p>
@@ -556,14 +556,14 @@
             {/if}
         </div>
         <div class="form-group mb-0">
-            <label class="form-label" style="color:var(--text-main);">Using: Your own API key (BYOK)</label>
+            <label class="form-label">Using: Your own API key (BYOK)</label>
         </div>
     {/if}
 
     {#if LOCAL_ONLY || !p.useProxy || !canUseProxy}
         <div class="byok-config" class:mt-3={canUseProxy}>
             {#if canUseProxy}
-                <div style="border-top:1px solid var(--border-color); padding-top:0.75rem; margin-top:0.5rem;"></div>
+                <div class="divider-top mt-2 pt-4"></div>
             {/if}
             <div class="form-group mb-0">
                 <label class="form-label" for="set-apiKey">Sarvam API Key</label>
@@ -573,9 +573,9 @@
         </div>
     {/if}
 
-    <div class="flex items-center gap-4 mt-4 pt-4" style="border-top:1px solid var(--border-color)">
+    <div class="flex items-center gap-4 mt-4 pt-4 divider-top">
         <button class="btn btn-primary" on:click={p.useProxy && canUseProxy ? testProxy : testProvider}>Test Connection</button>
-        <span class="text-sm" style="color: {testColor}; font-weight: 500;">{testResult}</span>
+        <span class="text-sm font-bold status-text" style="--status-color: {testColor};">{testResult}</span>
     </div>
 </div>
 
@@ -587,24 +587,24 @@
     </div>
 
     <div class="form-group">
-        <label class="form-label" for="set-rule">Custom Strategy Directive <span class="text-xs text-muted" style="font-weight:normal">(Optional)</span></label>
-        <textarea id="set-rule" class="textarea" bind:value={p.customPriorityRule} placeholder="e.g., Prioritize all CS 201 tasks first regardless of deadline..." style="min-height:80px"></textarea>
+        <label class="form-label" for="set-rule">Custom Strategy Directive <span class="text-xs text-muted">(Optional)</span></label>
+        <textarea id="set-rule" class="textarea textarea-tall" bind:value={p.customPriorityRule} placeholder="e.g., Prioritize all CS 201 tasks first regardless of deadline..."></textarea>
     </div>
 
     {#if p.mode !== 'professional'}
         <div class="form-group mb-0">
             <label class="form-label" for="group-preset">Default Baseline Sorting</label>
             <div id="group-preset" class="flex flex-col gap-2 mt-2">
-                <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                <label class="radio-option flex items-center gap-2 text-sm">
                     <input type="radio" value="Balanced" bind:group={p.priorityPreset}> Balanced (Deadlines + Effort)
                 </label>
-                <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                <label class="radio-option flex items-center gap-2 text-sm">
                     <input type="radio" value="Deadline First" bind:group={p.priorityPreset}> Panic Mode (Strictly Deadlines)
                 </label>
-                <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                <label class="radio-option flex items-center gap-2 text-sm">
                     <input type="radio" value="Easy First" bind:group={p.priorityPreset}> Momentum (Short/Easy First)
                 </label>
-                <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                <label class="radio-option flex items-center gap-2 text-sm">
                     <input type="radio" value="Hard First" bind:group={p.priorityPreset}> Frog Eating (Hard/Long First)
                 </label>
             </div>
@@ -616,13 +616,13 @@
         </div>
     {/if}
 
-    <div class="mt-4 pt-4" style="border-top:1px solid var(--border-color)">
+    <div class="mt-4 pt-4 divider-top">
         <div class="flex items-center gap-4">
             <button class="btn" on:click={rescoreAll} disabled={rescoring || $assignments.filter(a => a.status !== 'done').length === 0}>
                 {rescoring ? 'Re-scoring...' : '🔄 Re-score All Assignments'}
             </button>
             {#if rescoreProgress}
-                <span class="text-sm" style="color: {rescoring ? 'var(--text-muted)' : 'var(--success)'}; font-weight: 500;">
+                <span class="text-sm font-bold status-text" style="--status-color: {rescoring ? 'var(--text-muted)' : 'var(--success)'};">
                     {rescoreProgress}
                 </span>
             {/if}
@@ -635,7 +635,7 @@
     <div class="card-title mb-4">Smart Planning</div>
     <div class="form-group mb-0">
         <label class="form-label" for="set-hours">Available Hours Per Day</label>
-        <input id="set-hours" type="number" class="input" bind:value={p.availableHoursPerDay} min="1" max="16" step="1" style="width: 100px;">
+        <input id="set-hours" type="number" class="input input-compact" bind:value={p.availableHoursPerDay} min="1" max="16" step="1">
         <p class="text-xs text-muted mt-2">Used for deadline risk alerts and weekly plan generation. Default: 6 hours.</p>
     </div>
 </div>
@@ -656,11 +656,11 @@
         </div>
 
         {#if accuracyInsights.typeInsights.length > 0}
-            <div class="text-sm" style="font-weight: 500; margin-bottom: 0.5rem;">By task type:</div>
+            <div class="text-sm font-bold mb-2">By task type:</div>
             {#each accuracyInsights.typeInsights as insight}
                 <div class="insight-row">
                     <span class="text-sm">{insight.type}</span>
-                    <span class="text-xs" style="color: {parseFloat(insight.avgVariance) > 0 ? 'var(--danger)' : parseFloat(insight.avgVariance) < 0 ? 'var(--success)' : 'var(--text-muted)'}">
+                    <span class="text-xs insight-variance" style="--variance-color: {parseFloat(insight.avgVariance) > 0 ? 'var(--danger)' : parseFloat(insight.avgVariance) < 0 ? 'var(--success)' : 'var(--text-muted)'}">
                         {parseFloat(insight.avgVariance) > 0 ? 'underestimates' : parseFloat(insight.avgVariance) < 0 ? 'overestimates' : 'on target'}
                         by {Math.abs(insight.avgVariance)}% ({insight.count} tasks)
                     </span>
@@ -681,10 +681,10 @@
         <button class="btn" on:click={handleImportClick}>
             📥 Import JSON Backup
         </button>
-        <input type="file" accept=".json,application/json" bind:this={importFileInput} on:change={handleImportFile} style="display:none" aria-label="Import file">
+        <input type="file" accept=".json,application/json" bind:this={importFileInput} on:change={handleImportFile} class="hidden" aria-label="Import file">
     </div>
     {#if importMsg}
-        <p class="text-sm mt-3" style="color: {importColor}; font-weight: 500;">{importMsg}</p>
+        <p class="text-sm mt-3 font-bold status-text" style="--status-color: {importColor};">{importMsg}</p>
     {/if}
 </div>
 
@@ -712,11 +712,11 @@
         {/if}
 
         {#if calendarError}
-            <p class="text-sm mt-2" style="color: var(--danger);">{calendarError}</p>
+            <p class="text-sm mt-2 text-danger">{calendarError}</p>
         {/if}
 
         {#if calendarFeedUrl}
-            <div class="mt-4 pt-4" style="border-top:1px solid var(--border-color)">
+            <div class="mt-4 pt-4 divider-top">
                 <button class="text-link text-sm" on:click={() => calendarShowInstructions = !calendarShowInstructions}>
                     {calendarShowInstructions ? 'Hide' : 'Show'} Setup Instructions
                 </button>
@@ -750,11 +750,11 @@
                     </div>
                 {/if}
 
-                <div class="mt-3 flex gap-3">
+                <div class="mt-3 flex gap-3 items-center">
                     <button class="btn btn-sm" on:click={regenerateCalendarFeed} disabled={calendarGenerating}>
                         Regenerate Feed URL
                     </button>
-                    <span class="text-xs text-muted" style="align-self:center">Invalidates the old URL</span>
+                    <span class="text-xs text-muted">Invalidates the old URL</span>
                 </div>
             </div>
         {/if}
@@ -771,12 +771,12 @@
 {/if}
 
 {#if !LOCAL_ONLY && !$authStore.isGuest && !teamLoading && teamInvites.length > 0}
-    <div class="card mb-4 animate-fade" style="border-color: var(--primary)">
+    <div class="card card-highlight mb-4 animate-fade">
         <div class="card-title mb-3">Team Invitations</div>
         {#each teamInvites as invite}
             <div class="team-invite-row">
                 <div>
-                    <p class="text-sm" style="font-weight:500">{invite.teamName}</p>
+                    <p class="text-sm font-bold">{invite.teamName}</p>
                     <p class="text-xs text-muted">Invited as {invite.role}</p>
                 </div>
                 <div class="flex gap-2">
@@ -788,104 +788,143 @@
     </div>
 {/if}
 
-<button class="btn btn-primary w-full justify-center mb-8" on:click={saveSettings} style="padding: 0.75rem;">
+<button class="btn btn-primary btn-lg w-full justify-center mb-8" on:click={saveSettings}>
     Save Profiles & Preferences
 </button>
 
 <ConfirmModal bind:show={confirmConfig.show} title={confirmConfig.title} message={confirmConfig.message} onConfirm={confirmConfig.onConfirm} />
 
 <style>
-    .animate-fade {
-        animation: fadeIn 0.3s ease;
+    /* Local helpers — everything else comes from the global design system */
+
+    .divider-top {
+        border-top: 1px solid var(--border-color);
     }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+
+    .radio-option {
+        cursor: pointer;
     }
-    .w-full { width: 100%; }
-    .mb-0 { margin-bottom: 0; }
+
     .upgrade-hint {
-        font-size: 0.75rem;
-        color: var(--muted);
+        font-size: var(--fs-xs);
+        color: var(--text-muted);
     }
+
     .text-link {
         background: none;
         border: none;
         color: var(--primary);
-        font-size: 0.75rem;
+        font-size: var(--fs-xs);
         font-weight: 500;
         cursor: pointer;
         padding: 0;
         text-decoration: underline;
+        transition: color var(--transition-fast);
     }
+    .text-link:hover {
+        color: var(--primary-hover);
+    }
+
     .proxy-locked {
-        padding: 0.75rem 1rem;
-        background: var(--bg-card);
-        border: 1px dashed var(--border-color);
-        border-radius: 8px;
+        padding: var(--space-3) var(--space-4);
+        background: var(--surface-2);
+        border: 1px dashed var(--border-strong);
+        border-radius: var(--radius);
     }
+
+    .badge {
+        display: inline-block;
+        padding: var(--space-1) var(--space-2);
+        border-radius: var(--radius-full);
+        font-size: var(--fs-xs);
+        font-weight: 600;
+        line-height: 1.4;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .badge-pro {
+        background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.15), rgba(var(--primary-rgb), 0.08));
+        color: var(--primary);
+    }
+
+    .status-text {
+        color: var(--status-color, var(--text-main));
+    }
+
+    .insight-variance {
+        color: var(--variance-color, var(--text-muted));
+    }
+
+    .input-compact {
+        width: 6.25rem;
+    }
+
+    .textarea-tall {
+        min-height: 5rem;
+    }
+
+    .detail-card {
+        padding: var(--space-4);
+        background: var(--bg-subtle);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+    }
+
+    .card-highlight {
+        border-color: var(--primary-border);
+    }
+
     .team-invite-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 0.625rem 0;
+        gap: var(--space-3);
+        padding: var(--space-3) 0;
         border-bottom: 1px solid var(--border-color);
     }
     .team-invite-row:last-child {
         border-bottom: none;
     }
-    .badge {
-        display: inline-block;
-        padding: 0.125rem 0.5rem;
-        border-radius: 9999px;
-        font-size: 0.625rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    .badge-pro {
-        background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.15), rgba(var(--primary-rgb), 0.08));
-        color: var(--primary);
-    }
-    .btn-sm {
-        padding: 0.25rem 0.75rem;
-        font-size: 0.75rem;
-    }
+
     .calendar-feed-url-row {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        background: var(--surface-color, #f9f9fb);
+        gap: var(--space-2);
+        background: var(--surface-2);
         border: 1px solid var(--border-color);
-        border-radius: var(--radius, 8px);
-        padding: 0.5rem 0.75rem;
+        border-radius: var(--radius);
+        padding: var(--space-2) var(--space-3);
     }
+
     .calendar-feed-url {
         flex: 1;
-        font-size: 0.7rem;
-        word-break: break-all;
-        color: var(--text-muted);
+        font-size: var(--fs-xs);
         font-family: monospace;
+        color: var(--text-muted);
         line-height: 1.4;
+        word-break: break-all;
     }
+
     .calendar-instructions {
-        background: var(--surface-color, #f9f9fb);
+        background: var(--surface-2);
         border: 1px solid var(--border-color);
-        border-radius: var(--radius, 8px);
-        padding: 1rem;
+        border-radius: var(--radius);
+        padding: var(--space-4);
     }
+
     .calendar-instruction-group {
-        margin-bottom: 0.75rem;
+        margin-bottom: var(--space-3);
     }
     .calendar-instruction-group:last-child {
         margin-bottom: 0;
     }
     .calendar-instruction-group ol {
-        margin: 0.25rem 0 0 1.25rem;
+        margin: var(--space-1) 0 0 var(--space-5);
         padding: 0;
         line-height: 1.6;
     }
     .calendar-instruction-group li {
-        margin-bottom: 0.25rem;
+        margin-bottom: var(--space-1);
     }
 </style>

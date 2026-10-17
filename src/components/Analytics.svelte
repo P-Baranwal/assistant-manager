@@ -454,7 +454,7 @@ ${projectBreakdownData.map(p => `${p.title}: ${p.hours.toFixed(1)}h across ${p.t
             <h2>Velocity</h2>
             <p class="text-muted">Tasks completed per week (last 8 weeks)</p>
             <div class="chart-container">
-                <canvas id="velocityChart"></canvas>
+                <canvas id="velocityChart" aria-label="Bar chart of tasks completed per week over the last 8 weeks"></canvas>
             </div>
         </div>
 
@@ -463,7 +463,7 @@ ${projectBreakdownData.map(p => `${p.title}: ${p.hours.toFixed(1)}h across ${p.t
             <h2>Time Accuracy</h2>
             <p class="text-muted">Estimated vs actual hours by task type</p>
             <div class="chart-container">
-                <canvas id="timeAccuracyChart"></canvas>
+                <canvas id="timeAccuracyChart" aria-label="Bar chart comparing estimated and actual hours by task type"></canvas>
             </div>
             {#if timeAccuracyData.length > 0}
                 <div class="accuracy-table">
@@ -498,7 +498,7 @@ ${projectBreakdownData.map(p => `${p.title}: ${p.hours.toFixed(1)}h across ${p.t
             <h2>Project Breakdown</h2>
             <p class="text-muted">Time distribution by project (last 30 days)</p>
             <div class="chart-container">
-                <canvas id="projectBreakdownChart"></canvas>
+                <canvas id="projectBreakdownChart" aria-label="Doughnut chart of time distribution by project"></canvas>
             </div>
             {#if projectBreakdownData.length > 0}
                 <div class="project-list">
@@ -537,8 +537,8 @@ ${projectBreakdownData.map(p => `${p.title}: ${p.hours.toFixed(1)}h across ${p.t
                         <div class="calibration-row">
                             <span class="week-label">{week.week}</span>
                             <div class="bar-container">
-                                <div class="bar priority-bar" style="width: {week.avgPriority}%"></div>
-                                <div class="bar difficulty-bar" style="width: {week.avgDifficulty * 10}%"></div>
+                                <div class="bar priority-bar bar-fill" style="--bar-w: {week.avgPriority}%"></div>
+                                <div class="bar difficulty-bar bar-fill" style="--bar-w: {week.avgDifficulty * 10}%"></div>
                             </div>
                             <span class="values">{week.avgPriority.toFixed(0)} / {(week.avgDifficulty).toFixed(1)}</span>
                         </div>
@@ -573,7 +573,7 @@ ${projectBreakdownData.map(p => `${p.title}: ${p.hours.toFixed(1)}h across ${p.t
                 {#if teamAnalyticsData.workload && teamAnalyticsData.workload.length > 0}
                     <h3>Workload Distribution</h3>
                     <div class="chart-container">
-                        <canvas id="workloadChart"></canvas>
+                        <canvas id="workloadChart" aria-label="Bar chart of task count per team member"></canvas>
                     </div>
                     
                     <div class="workload-table">
@@ -615,240 +615,31 @@ ${projectBreakdownData.map(p => `${p.title}: ${p.hours.toFixed(1)}h across ${p.t
 </div>
 
 <style>
-    .analytics-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 1rem;
+    /* Local additions layered on top of the global analytics design system.
+       Base card, grid, table, chart and badge styling all come from globals. */
+
+    /* Team analytics card spans the full width of the grid */
+    .team-analytics {
+        grid-column: 1 / -1;
     }
-    
-    .analytics-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-    
-    .analytics-header h1 {
-        margin: 0;
-        font-size: 1.5rem;
-        font-weight: 600;
-    }
-    
-    .export-buttons {
-        display: flex;
-        gap: 0.5rem;
-    }
-    
-    .analytics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 1.5rem;
-    }
-    
-    .analytics-card {
-        background: var(--surface-color);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius);
-        padding: 1.5rem;
-        box-shadow: var(--shadow-sm);
-    }
-    
-    .analytics-card h2 {
-        margin: 0 0 0.5rem 0;
-        font-size: 1.25rem;
-        font-weight: 600;
-    }
-    
-    .analytics-card h3 {
-        margin: 1.5rem 0 0.75rem 0;
-        font-size: 1rem;
-        font-weight: 600;
-    }
-    
-    .chart-container {
-        height: 200px;
-        margin: 1rem 0;
-        position: relative;
-    }
-    
-    .accuracy-table, .workload-table {
-        margin-top: 1rem;
-        overflow-x: auto;
-    }
-    
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.875rem;
-    }
-    
-    th, td {
-        padding: 0.5rem;
-        text-align: left;
-        border-bottom: 1px solid var(--border-color);
-    }
-    
-    th {
-        font-weight: 600;
-        color: var(--text-muted);
-    }
-    
-    .project-list {
-        margin-top: 1rem;
-    }
-    
-    .project-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid var(--border-color);
-    }
-    
-    .project-item:last-child {
-        border-bottom: none;
-    }
-    
-    .project-title {
-        font-weight: 500;
-        flex: 1;
-    }
-    
-    .project-hours {
-        color: var(--primary);
-        font-weight: 600;
-        margin-left: 1rem;
-    }
-    
-    .project-tasks {
-        color: var(--text-muted);
-        margin-left: 1rem;
-        min-width: 60px;
-        text-align: right;
-    }
-    
+
+    /* Streak card gets a subtle brand tint so the headline metric pops */
     .streaks-card {
-        text-align: center;
+        background: linear-gradient(160deg, rgba(var(--primary-rgb), 0.10), rgba(var(--primary-rgb), 0.02));
     }
-    
-    .streak-display {
-        margin: 1.5rem 0;
+
+    /* Calibration bar widths are value-driven, carried via a custom property */
+    .bar-fill {
+        width: var(--bar-w, 0%);
     }
-    
-    .streak-number {
-        font-size: 3rem;
-        font-weight: 700;
-        color: var(--primary);
-        display: block;
-        line-height: 1;
-    }
-    
-    .streak-label {
-        font-size: 1rem;
-        color: var(--text-muted);
-        display: block;
-        margin-top: 0.5rem;
-    }
-    
-    .calibration-chart {
-        margin-top: 1rem;
-    }
-    
-    .calibration-header {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        margin-bottom: 0.5rem;
-    }
-    
-    .calibration-row {
-        display: flex;
-        align-items: center;
-        margin-bottom: 0.5rem;
-    }
-    
-    .week-label {
-        width: 100px;
-        font-size: 0.75rem;
-        color: var(--text-muted);
-    }
-    
-    .bar-container {
-        flex: 1;
-        height: 20px;
-        background: var(--border-color);
-        border-radius: 4px;
-        overflow: hidden;
-        display: flex;
-    }
-    
-    .bar {
-        height: 100%;
-        transition: width 0.3s ease;
-    }
-    
-    .priority-bar {
-        background: var(--primary);
-        opacity: 0.7;
-    }
-    
-    .difficulty-bar {
-        background: var(--danger);
-        opacity: 0.7;
-    }
-    
-    .values {
-        width: 60px;
-        text-align: right;
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        margin-left: 0.5rem;
-    }
-    
-    .team-stats {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 1rem;
-        margin: 1rem 0;
-    }
-    
-    .blocked-list {
-        margin-top: 1rem;
-    }
-    
-    .blocked-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid var(--border-color);
-    }
-    
-    .blocked-item:last-child {
-        border-bottom: none;
-    }
-    
+
+    /* Local helpers — JS-toggled / not covered by the global sheet */
     .task-title {
-        font-weight: 500;
         flex: 1;
+        font-weight: 500;
     }
-    
-    .blocked-since {
-        color: var(--text-muted);
-        font-size: 0.875rem;
-    }
-    
-    .text-danger {
-        color: var(--danger);
-    }
-    
+
     .text-success {
         color: var(--success);
-    }
-    
-    .text-muted {
-        color: var(--text-muted);
-        font-size: 0.875rem;
     }
 </style>

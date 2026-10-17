@@ -55,7 +55,7 @@
     <div class="risk-banner animate-fade" role="alert">
         <div class="risk-banner-content">
             <div class="risk-banner-icon">
-                <svg class="svg-icon" viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
             </div>
             <div class="risk-banner-text">
                 <strong>Overload Alert:</strong> You have ~{riskData.totalHours.toFixed(1)}h of work due in the next 7 days
@@ -66,8 +66,8 @@
                     Consider rescheduling or deprioritizing some tasks.
                 {/if}
             </div>
-            <button class="risk-banner-dismiss" on:click={dismiss} title="Dismiss until tomorrow">
-                <svg class="svg-icon" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+            <button class="risk-banner-dismiss" on:click={dismiss} title="Dismiss until tomorrow" aria-label="Dismiss overload alert">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
             </button>
         </div>
     </div>
@@ -75,26 +75,31 @@
 
 <style>
     .risk-banner {
-        background: linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(239, 68, 68, 0.08));
-        border: 1px solid rgba(249, 115, 22, 0.3);
-        padding: 0.75rem 1rem;
-        margin: 0.75rem auto;
+        background: linear-gradient(135deg, var(--warning-surface), var(--danger-surface));
+        border: 1px solid var(--border-color);
+        border-left: 3px solid var(--diff-high);
+        padding: var(--space-3) var(--space-4);
+        margin: var(--space-3) auto;
         max-width: 1200px;
         border-radius: var(--radius);
     }
     .risk-banner-content {
         display: flex;
         align-items: flex-start;
-        gap: 0.75rem;
+        gap: var(--space-3);
     }
     .risk-banner-icon {
         color: var(--diff-high);
         flex-shrink: 0;
-        margin-top: 0.1rem;
+        margin-top: var(--space-1);
+    }
+    .risk-banner-icon .svg-icon {
+        width: 20px;
+        height: 20px;
     }
     .risk-banner-text {
         flex: 1;
-        font-size: 0.875rem;
+        font-size: var(--fs-base);
         color: var(--text-main);
         line-height: 1.5;
     }
@@ -103,19 +108,17 @@
         border: none;
         color: var(--text-muted);
         cursor: pointer;
-        padding: 0.25rem;
-        border-radius: 4px;
+        padding: var(--space-1);
+        border-radius: var(--radius-xs);
         flex-shrink: 0;
+        transition: var(--transition-fast);
     }
     .risk-banner-dismiss:hover {
-        background: rgba(0, 0, 0, 0.05);
+        background: var(--surface-2);
         color: var(--text-main);
     }
-    .animate-fade {
-        animation: fadeIn 0.3s ease;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+    .risk-banner-dismiss:focus-visible {
+        outline: none;
+        box-shadow: var(--ring);
     }
 </style>

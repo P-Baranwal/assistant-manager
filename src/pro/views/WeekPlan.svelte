@@ -53,7 +53,7 @@
                 <button class="btn btn-primary mt-4" on:click={() => view.set('add')}>Add Task</button>
             </div>
         {:else}
-            <div class="card" style="text-align:center; padding: 3rem;">
+            <div class="card plan-cta">
                 <h3 class="mb-2">Ready to plan your week?</h3>
                 <p class="text-sm text-muted mb-4">AI will analyze your {activeItems.length} active tasks and create a realistic daily schedule.</p>
                 <button class="btn btn-primary" on:click={generatePlan}>
@@ -80,12 +80,12 @@
 
         <div class="plan-grid">
             {#each $weeklyPlan as day, i}
-                <div class="plan-day-card" style="animation-delay: {i * 0.05}s">
+                <div class="plan-day-card" style="--delay: {i * 0.05}s">
                     <div class="plan-day-header">
                         <div>
                             <strong>{day.day}</strong>
                             {#if day.date}
-                                <span class="text-xs text-muted" style="margin-left: 0.5rem">{day.date}</span>
+                                <span class="day-date text-xs text-muted">{day.date}</span>
                             {/if}
                         </div>
                         <span class="plan-hours-badge" class:overloaded={day.totalHours > ($profile.availableHoursPerDay || 6)}>
@@ -106,7 +106,7 @@
                             {/each}
                         </div>
                     {:else}
-                        <p class="text-sm text-muted" style="padding: 0.75rem 0;">No tasks scheduled</p>
+                        <p class="day-empty text-sm text-muted">No tasks scheduled</p>
                     {/if}
 
                     {#if day.note}
@@ -126,27 +126,21 @@
     {/if}
 
     {#if errorMsg}
-        <div class="text-sm mt-4" style="color: var(--danger); padding: 0.5rem; background: #fee2e2; border-radius:4px;">{errorMsg}</div>
+        <div class="form-error text-sm mt-4">{errorMsg}</div>
     {/if}
 </div>
 
 <Spinner bind:show={processing} text={spinnerText} />
 
 <style>
-    .animate-fade {
-        animation: fadeIn 0.3s ease;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
     .plan-summary {
         display: flex;
-        gap: 1.5rem;
-        padding: 1rem 1.25rem;
+        gap: var(--space-6);
+        padding: var(--space-4) var(--space-5);
         background: var(--surface-color);
         border: 1px solid var(--border-color);
-        border-radius: var(--radius);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-xs);
     }
     .plan-summary-stat {
         display: flex;
@@ -154,11 +148,11 @@
     }
     .plan-summary-stat .stat-value {
         font-family: var(--font-display);
-        font-size: 1.25rem;
+        font-size: var(--fs-xl);
         font-weight: 600;
     }
     .plan-summary-stat .stat-label {
-        font-size: 0.75rem;
+        font-size: var(--fs-xs);
         color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -166,14 +160,16 @@
     .plan-grid {
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        gap: var(--space-3);
     }
     .plan-day-card {
         background: var(--surface-color);
         border: 1px solid var(--border-color);
-        border-radius: var(--radius);
-        padding: 1rem 1.25rem;
-        animation: slideUp 0.3s ease-out backwards;
+        border-radius: var(--radius-lg);
+        padding: var(--space-4) var(--space-5);
+        box-shadow: var(--shadow-xs);
+        animation: slideUp 0.3s var(--ease) backwards;
+        animation-delay: var(--delay, 0s);
     }
     @keyframes slideUp {
         from { opacity: 0; transform: translateY(8px); }
@@ -183,37 +179,37 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 0.75rem;
-        padding-bottom: 0.5rem;
+        margin-bottom: var(--space-3);
+        padding-bottom: var(--space-2);
         border-bottom: 1px solid var(--border-color);
     }
     .plan-hours-badge {
         background: var(--primary-surface);
         color: var(--primary);
-        padding: 0.2rem 0.6rem;
-        border-radius: 99px;
-        font-size: 0.8125rem;
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-full);
+        font-size: var(--fs-sm);
         font-weight: 600;
     }
     .plan-hours-badge.overloaded {
-        background: rgba(239, 68, 68, 0.12);
+        background: var(--danger-surface);
         color: var(--danger);
     }
     .plan-blocks {
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: var(--space-2);
     }
     .plan-block {
         display: flex;
         align-items: center;
-        gap: 0.625rem;
-        padding: 0.5rem 0.75rem;
-        background: var(--bg-color);
-        border-radius: 6px;
+        gap: var(--space-3);
+        padding: var(--space-2) var(--space-3);
+        background: var(--bg-subtle);
+        border-radius: var(--radius-sm);
     }
     .plan-slot-icon {
-        font-size: 1rem;
+        font-size: var(--fs-md);
         flex-shrink: 0;
     }
     .plan-block-info {
@@ -221,13 +217,23 @@
         flex-direction: column;
     }
     .plan-block-task {
-        font-size: 0.875rem;
+        font-size: var(--fs-base);
         font-weight: 500;
     }
     .plan-day-note {
-        margin-top: 0.5rem;
-        padding-top: 0.5rem;
+        margin-top: var(--space-2);
+        padding-top: var(--space-2);
         border-top: 1px dashed var(--border-color);
         font-style: italic;
+    }
+    .plan-cta {
+        text-align: center;
+        padding: var(--space-12);
+    }
+    .day-date {
+        margin-left: var(--space-2);
+    }
+    .day-empty {
+        padding: var(--space-3) 0;
     }
 </style>

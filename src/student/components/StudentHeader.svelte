@@ -54,3 +54,29 @@
         </button>
     </div>
 </header>
+
+<style>
+    header {
+        gap: var(--space-4);
+    }
+    .stat-bar {
+        gap: var(--space-6);
+        flex-wrap: wrap;
+        row-gap: var(--space-3);
+    }
+    .header-actions {
+        gap: var(--space-3);
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+    @media (max-width: 860px) {
+        header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: var(--space-4);
+        }
+        .header-actions {
+            justify-content: flex-start;
+        }
+    }
+</style>
