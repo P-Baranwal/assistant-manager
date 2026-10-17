@@ -1,25 +1,10 @@
-import * as ollama from './providers/ollama.js';
-import * as anthropic from './providers/anthropic.js';
-import * as openai from './providers/openai.js';
-import * as gemini from './providers/gemini.js';
-import * as groq from './providers/groq.js';
+import * as sarvam from './providers/sarvam.js';
 import * as proxy from './providers/proxy.js';
 import { JSON_SCHEMA_PROMPT, normalizeAnalysisResult } from './contract.js';
 
-const providers = {
-    ollama,
-    anthropic,
-    openai,
-    gemini,
-    groq
-};
-
 function getPlugin(profile) {
     if (profile.useProxy) return proxy;
-    const providerName = profile.provider || 'ollama';
-    const plugin = providers[providerName];
-    if (!plugin) throw new Error(`Unknown provider: ${providerName}`);
-    return plugin;
+    return sarvam;
 }
 
 export async function fetchHealth(profile) {

@@ -10,10 +10,10 @@ export function validate(_profile) {
 export async function healthCheck(profile) {
     const v = validate(profile);
     if (!v.ok) return { reachable: false, label: v.message };
-    return { reachable: true, label: 'Clerify AI proxy available' };
+    return { reachable: true, label: 'Clerify AI (Sarvam) proxy available' };
 }
 
-export async function analyze({ system, user, profile, feature }) {
+export async function analyze({ system, user, feature }) {
     if (!PROXY_URL) throw new Error('AI proxy URL not configured (VITE_AI_PROXY_URL)');
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -29,8 +29,7 @@ export async function analyze({ system, user, profile, feature }) {
         body: JSON.stringify({
             system,
             user,
-            provider: profile.provider || 'groq',
-            model: profile.ollamaModel || undefined,
+            model: 'sarvam-105b',
             feature: feature || 'ai_proxy',
         }),
     });

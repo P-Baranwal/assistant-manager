@@ -10,82 +10,29 @@ const corsHeaders = {
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const RESEND_FROM = Deno.env.get("RESEND_FROM") || "Clerify <digest@clerify.app>";
 
-// Provider routing (reuses the same pattern as ai-proxy)
-interface ProviderRequest {
-  system: string;
-  user: string;
-  provider: string;
-  model?: string;
-}
+// Sarvam chat completion (sole provider)
+async function callSarvam(system: string, user: string): Promise<string> {
+  const apiKey = Deno.env.get("SARVAM_API_KEY");
+  if (!apiKey) throw new Error("SARVAM_API_KEY not configured");
 
-async function callGroq(req: ProviderRequest, apiKey: string): Promise<string> {
-  const model = req.model || "llama-3.3-70b-versatile";
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const res = await fetch("https://api.sarvam.ai/v1/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    headers: { "Content-Type": "application/json", "api-subscription-key": apiKey },
     body: JSON.stringify({
-      model, temperature: 0.3,
-      messages: [{ role: "system", content: req.system }, { role: "user", content: req.user }],
+      model: "sarvam-105b",
+      temperature: 0.3,
+      max_tokens: 1024,
+      reasoning_effort: null,
+      messages: [{ role: "system", content: system }, { role: "user", content: user }],
     }),
   });
-  if (!res.ok) throw new Error(`Groq error: ${res.status}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Sarvam error: ${err.error?.message || res.status}`);
+  }
   const data = await res.json();
   return data.choices[0].message.content;
 }
-
-async function callAnthropic(req: ProviderRequest, apiKey: string): Promise<string> {
-  const model = req.model || "claude-3-5-sonnet-20240620";
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({
-      model, max_tokens: 1024,
-      system: req.system, messages: [{ role: "user", content: req.user }],
-    }),
-  });
-  if (!res.ok) throw new Error(`Anthropic error: ${res.status}`);
-  const data = await res.json();
-  return data.content[0].text;
-}
-
-async function callOpenAI(req: ProviderRequest, apiKey: string): Promise<string> {
-  const model = req.model || "gpt-4o";
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model, temperature: 0.3,
-      messages: [{ role: "system", content: req.system }, { role: "user", content: req.user }],
-    }),
-  });
-  if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
-  const data = await res.json();
-  return data.choices[0].message.content;
-}
-
-async function callGemini(req: ProviderRequest, apiKey: string): Promise<string> {
-  const model = req.model || "gemini-2.0-flash";
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: req.system }] },
-      contents: [{ parts: [{ text: req.user }] }],
-      generationConfig: { temperature: 0.3 },
-    }),
-  });
-  if (!res.ok) throw new Error(`Gemini error: ${res.status}`);
-  const data = await res.json();
-  return data.candidates[0].content.parts[0].text;
-}
-
-const PROVIDER_MAP: Record<string, (req: ProviderRequest, key: string) => Promise<string>> = {
-  groq: callGroq, anthropic: callAnthropic, openai: callOpenAI, gemini: callGemini,
-};
-
-const PROVIDER_KEY_ENV: Record<string, string> = {
-  groq: "GROQ_API_KEY", anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY", gemini: "GEMINI_API_KEY",
-};
 
 function buildDigestHTML(userName: string, summary: string, tasks: any[]): string {
   const taskRows = tasks.map(t => `
@@ -148,7 +95,7 @@ serve(async (req) => {
     // 1. Find all paying users with digest opted in
     const { data: profiles, error: profileError } = await supabase
       .from("profiles")
-      .select("id, display_name, provider, ollama_model")
+      .select("id, display_name")
       .in("subscription", ["student", "pro", "team"]);
 
     if (profileError) throw new Error(`Failed to query profiles: ${profileError.message}`);
@@ -187,30 +134,19 @@ serve(async (req) => {
 
         if (allItems.length === 0) continue;
 
-        // 3. Generate AI summary using the user's configured provider
-        const providerName = profile.provider || "groq";
-        const keyEnvName = PROVIDER_KEY_ENV[providerName];
-        const apiKey = keyEnvName ? Deno.env.get(keyEnvName) : null;
+        // 3. Generate AI summary using Sarvam
+        const taskList = allItems.map(t =>
+          `- "${t.title}" (deadline: ${t.deadline || 'none'}, priority: ${t.priority_score || 50}, est: ${t.estimated_hours || '?'}h)`
+        ).join('\n');
+
+        const system = `You are a motivational productivity assistant. Write a brief 3-4 sentence summary of the user's upcoming week based on their top tasks. Be encouraging but grounded — reference specific tasks and deadlines. Keep it concise and warm. Do not use markdown.`;
+        const user = `My top tasks for the coming week:\n${taskList}`;
 
         let summary = "";
-        if (apiKey && PROVIDER_MAP[providerName]) {
-          const taskList = allItems.map(t =>
-            `- "${t.title}" (deadline: ${t.deadline || 'none'}, priority: ${t.priority_score || 50}, est: ${t.estimated_hours || '?'}h)`
-          ).join('\n');
-
-          const system = `You are a motivational productivity assistant. Write a brief 3-4 sentence summary of the user's upcoming week based on their top tasks. Be encouraging but grounded — reference specific tasks and deadlines. Keep it concise and warm. Do not use markdown.`;
-          const user = `My top tasks for the coming week:\n${taskList}`;
-
-          try {
-            summary = await PROVIDER_MAP[providerName](
-              { system, user, provider: providerName, model: profile.ollama_model },
-              apiKey
-            );
-          } catch (e) {
-            console.warn(`AI summary failed for ${profile.id}:`, e.message);
-            summary = `You have ${allItems.length} tasks to focus on this week. Prioritize by deadline and stay focused!`;
-          }
-        } else {
+        try {
+          summary = await callSarvam(system, user);
+        } catch (e) {
+          console.warn(`AI summary failed for ${profile.id}:`, e.message);
           summary = `You have ${allItems.length} tasks to focus on this week. Prioritize by deadline and stay focused!`;
         }
 

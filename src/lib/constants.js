@@ -1,7 +1,6 @@
 export const TYPES = ['Essay', 'Coding', 'Math', 'Research', 'Other'];
 export const STATUS = ['active', 'done', 'todo', 'in_progress', 'blocked'];
 export const PRESETS = ['Deadline-first', 'Difficulty-first', 'Easiest-first', 'Balanced'];
-export const PROVIDER_NAMES = ['ollama', 'anthropic', 'openai', 'gemini', 'groq'];
 
 export const ENTITY_TYPES = ['assignment', 'task', 'project'];
 

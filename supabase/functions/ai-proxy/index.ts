@@ -8,87 +8,23 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// ── Provider routing helpers ──────────────────────────────────────
+const SARVAM_CHAT_URL = "https://api.sarvam.ai/v1/chat/completions";
 
-interface ProviderRequest {
-  system: string;
-  user: string;
-  provider: string;
-  model?: string;
-}
-
-async function callGroq(req: ProviderRequest, apiKey: string): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
-  const model = req.model || "llama-3.3-70b-versatile";
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+async function callSarvam(
+  req: { system: string; user: string; model?: string },
+  apiKey: string
+): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
+  const res = await fetch(SARVAM_CHAT_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      "api-subscription-key": apiKey,
     },
     body: JSON.stringify({
-      model,
+      model: req.model || "sarvam-105b",
       temperature: 0.2,
-      messages: [
-        { role: "system", content: req.system },
-        { role: "user", content: req.user },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`Groq error: ${err.error?.message || res.status}`);
-  }
-
-  const data = await res.json();
-  return {
-    content: data.choices[0].message.content,
-    inputTokens: data.usage?.prompt_tokens ?? 0,
-    outputTokens: data.usage?.completion_tokens ?? 0,
-  };
-}
-
-async function callAnthropic(req: ProviderRequest, apiKey: string): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
-  const model = req.model || "claude-3-5-sonnet-20240620";
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model,
       max_tokens: 4096,
-      system: req.system,
-      messages: [{ role: "user", content: req.user }],
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`Anthropic error: ${err.error?.message || res.status}`);
-  }
-
-  const data = await res.json();
-  return {
-    content: data.content[0].text,
-    inputTokens: data.usage?.input_tokens ?? 0,
-    outputTokens: data.usage?.output_tokens ?? 0,
-  };
-}
-
-async function callOpenAI(req: ProviderRequest, apiKey: string): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
-  const model = req.model || "gpt-4o";
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
+      reasoning_effort: null,
       messages: [
         { role: "system", content: req.system },
         { role: "user", content: req.user },
@@ -98,7 +34,7 @@ async function callOpenAI(req: ProviderRequest, apiKey: string): Promise<{ conte
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`OpenAI error: ${err.error?.message || res.status}`);
+    throw new Error(`Sarvam error: ${err.error?.message || res.status}`);
   }
 
   const data = await res.json();
@@ -108,49 +44,6 @@ async function callOpenAI(req: ProviderRequest, apiKey: string): Promise<{ conte
     outputTokens: data.usage?.completion_tokens ?? 0,
   };
 }
-
-async function callGemini(req: ProviderRequest, apiKey: string): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
-  const model = req.model || "gemini-2.0-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: req.system }] },
-      contents: [{ parts: [{ text: req.user }] }],
-      generationConfig: { temperature: 0.2 },
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`Gemini error: ${err.error?.message || res.status}`);
-  }
-
-  const data = await res.json();
-  return {
-    content: data.candidates[0].content.parts[0].text,
-    inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
-    outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
-  };
-}
-
-const PROVIDER_MAP: Record<string, (req: ProviderRequest, key: string) => Promise<{ content: string; inputTokens: number; outputTokens: number }>> = {
-  groq: callGroq,
-  anthropic: callAnthropic,
-  openai: callOpenAI,
-  gemini: callGemini,
-};
-
-// ── Env var names for per-provider API keys ────────────────────────
-const PROVIDER_KEY_ENV: Record<string, string> = {
-  groq: "GROQ_API_KEY",
-  anthropic: "ANTHROPIC_API_KEY",
-  openai: "OPENAI_API_KEY",
-  gemini: "GEMINI_API_KEY",
-};
-
-// ── Main handler ───────────────────────────────────────────────────
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -160,6 +53,14 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const sarvamKey = Deno.env.get("SARVAM_API_KEY");
+
+    if (!sarvamKey) {
+      return new Response(
+        JSON.stringify({ error: "Sarvam API key not configured on the server." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // 1. Validate JWT
     const authHeader = req.headers.get("Authorization");
@@ -186,7 +87,7 @@ serve(async (req) => {
     }
 
     // 2. Parse request body
-    const { system, user: userMsg, provider, model, feature } = await req.json();
+    const { system, user: userMsg, model, feature } = await req.json();
     if (!system || !userMsg) {
       return new Response(
         JSON.stringify({ error: "Missing system or user message" }),
@@ -194,9 +95,7 @@ serve(async (req) => {
       );
     }
 
-    const targetProvider = provider || "groq";
-
-    // 3. Look up profile for subscription and usage
+    // 3. Load profile for subscription gating
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("subscription")
@@ -210,7 +109,6 @@ serve(async (req) => {
       );
     }
 
-    // 4. Check subscription allows proxy access
     const SUBSCRIPTION_LIMITS: Record<string, { aiMonthlyLimit: number }> = {
       free: { aiMonthlyLimit: 0 },
       student: { aiMonthlyLimit: 100 },
@@ -230,7 +128,7 @@ serve(async (req) => {
       );
     }
 
-    // 5. Check monthly usage (only for limited plans)
+    // 4. Check monthly usage (only for limited plans)
     if (limits.aiMonthlyLimit > 0) {
       const { count } = await supabase
         .from("ai_usage")
@@ -253,35 +151,10 @@ serve(async (req) => {
       }
     }
 
-    // 6. Get provider API key from server-side env
-    const keyEnvName = PROVIDER_KEY_ENV[targetProvider];
-    if (!keyEnvName) {
-      return new Response(
-        JSON.stringify({ error: `Unsupported proxy provider: ${targetProvider}` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const apiKey = Deno.env.get(keyEnvName);
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: `Proxy provider ${targetProvider} is not configured on the server.` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // 7. Route to provider
-    const providerFn = PROVIDER_MAP[targetProvider];
-    if (!providerFn) {
-      return new Response(
-        JSON.stringify({ error: `No handler for provider: ${targetProvider}` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
+    // 5. Route to Sarvam
     let result;
     try {
-      result = await providerFn({ system, user: userMsg, provider: targetProvider, model }, apiKey);
+      result = await callSarvam({ system, user: userMsg, model }, sarvamKey);
     } catch (providerErr) {
       return new Response(
         JSON.stringify({ error: providerErr.message }),
@@ -289,11 +162,11 @@ serve(async (req) => {
       );
     }
 
-    // 8. Log usage
+    // 6. Log usage
     try {
       await supabase.rpc("log_ai_usage", {
         p_feature: feature || "ai_proxy",
-        p_model: model || targetProvider,
+        p_model: model || "sarvam-105b",
         p_input_tokens: result.inputTokens,
         p_output_tokens: result.outputTokens,
       });
@@ -301,7 +174,7 @@ serve(async (req) => {
       console.warn("Failed to log AI usage:", logErr);
     }
 
-    // 9. Return response
+    // 7. Return response
     return new Response(
       JSON.stringify({
         content: result.content,

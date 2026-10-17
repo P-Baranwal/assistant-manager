@@ -1,4 +1,4 @@
-import { TYPES, STATUS, PRESETS, PROVIDER_NAMES, DIFFICULTY, PRIORITY, TIERS, IMPACT, SUBSCRIPTION_TIERS } from './constants.js';
+import { TYPES, STATUS, PRESETS, DIFFICULTY, PRIORITY, TIERS, IMPACT, SUBSCRIPTION_TIERS } from './constants.js';
 import { LOCAL_ONLY } from './runtime.js';
 import { uuid } from './utils/id.js';
 
@@ -22,9 +22,6 @@ export function normalizeProfile(p) {
         skills: stringOr(p.skills, ""),
         priorityPreset: PRESETS.includes(p.priorityPreset) ? p.priorityPreset : "Balanced",
         customPriorityRule: stringOr(p.customPriorityRule, ""),
-        provider: LOCAL_ONLY ? 'ollama' : (PROVIDER_NAMES.includes(p.provider) ? p.provider : "ollama"),
-        ollamaUrl: stringOr(p.ollamaUrl, "http://localhost:11434"),
-        ollamaModel: stringOr(p.ollamaModel, "qwen2.5-coder:7b"),
         apiKey: stringOr(p.apiKey, ""),
         mode: TIERS.includes(p.mode) ? p.mode : (p.tier === 'professional' ? 'professional' : 'student'),
         subscription: SUBSCRIPTION_TIERS.includes(p.subscription) ? p.subscription : 'free',

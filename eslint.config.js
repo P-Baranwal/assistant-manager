@@ -34,6 +34,7 @@ export default [
         CustomEvent: 'readonly',
         AbortController: 'readonly',
         FileReader: 'readonly',
+        FormData: 'readonly',
         crypto: 'readonly',
         indexedDB: 'readonly'
       }

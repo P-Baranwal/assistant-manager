@@ -48,22 +48,11 @@
         }
     }
 
-    const MODEL_HINTS = {
-        ollama: 'e.g. qwen2.5:14b, llama3.1:8b, phi4',
-        anthropic: 'e.g. claude-3-5-sonnet-20240620, claude-opus-20240229',
-        openai: 'e.g. gpt-4o, gpt-4o-mini, gpt-4-turbo',
-        gemini: 'e.g. gemini-2.0-flash, gemini-1.5-flash, gemini-2.5-pro',
-        groq: 'e.g. llama-3.3-70b-versatile, llama-3.1-8b-instant, gemma2-9b-it'
-    };
-
     let p = $profile || {
-        provider: 'ollama',
         skills: '',
         priorityPreset: 'Balanced',
         customPriorityRule: '',
         apiKey: '',
-        ollamaUrl: 'http://localhost:11434',
-        ollamaModel: '',
         useProxy: false
     };
 
@@ -209,7 +198,6 @@
                 body: JSON.stringify({
                     system: 'Reply with exactly: "proxy_ok"',
                     user: 'Say proxy_ok',
-                    provider: 'groq',
                     feature: 'health_check',
                 }),
             });
@@ -577,35 +565,10 @@
             {#if canUseProxy}
                 <div style="border-top:1px solid var(--border-color); padding-top:0.75rem; margin-top:0.5rem;"></div>
             {/if}
-            <div class="form-group">
-                <label class="form-label" for="set-provider">Provider</label>
-                    <select id="set-provider" class="input" bind:value={p.provider}>
-                        <option value="ollama">Ollama (Local)</option>
-                    {#if !LOCAL_ONLY}
-                        <option value="anthropic">Anthropic (Claude)</option>
-                        <option value="openai">OpenAI (GPT-4)</option>
-                        <option value="gemini">Google (Gemini)</option>
-                        <option value="groq">Groq (Llama, Gemma)</option>
-                    {/if}
-                </select>
-            </div>
-
-            {#if p.provider !== 'ollama'}
-                <div class="form-group">
-                    <label class="form-label" for="set-apiKey">API Key</label>
-                    <input id="set-apiKey" type="password" class="input" bind:value={p.apiKey} placeholder="Enter your API key">
-                </div>
-            {:else}
-                <div class="form-group">
-                    <label class="form-label" for="set-baseUrl">Base URL</label>
-                    <input id="set-baseUrl" type="text" class="input" bind:value={p.ollamaUrl} placeholder="http://localhost:11434">
-                </div>
-            {/if}
-
             <div class="form-group mb-0">
-                <label class="form-label" for="set-model">Model Name <span class="text-xs text-muted" style="font-weight:normal">(Optional override)</span></label>
-                <input id="set-model" type="text" class="input" bind:value={p.ollamaModel} placeholder="Leave blank for default">
-                <p class="text-xs text-muted mt-2">{MODEL_HINTS[p.provider]}</p>
+                <label class="form-label" for="set-apiKey">Sarvam API Key</label>
+                <input id="set-apiKey" type="password" class="input" bind:value={p.apiKey} placeholder="Enter your Sarvam API key">
+                <p class="text-xs text-muted mt-2">Uses Sarvam-105B for analysis and planning.</p>
             </div>
         </div>
     {/if}
