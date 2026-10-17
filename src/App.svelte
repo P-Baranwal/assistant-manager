@@ -247,19 +247,20 @@
         to { opacity: 1; }
     }
     .sync-banner {
-        background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.15), rgba(var(--primary-rgb), 0.05));
-        border: 1px solid var(--border-color);
+        background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.14), rgba(var(--primary-rgb), 0.04));
+        border: 1px solid var(--primary-border);
         padding: 0.75rem 1rem;
         margin: 1rem auto;
         max-width: 1200px;
-        border-radius: 8px;
+        border-radius: var(--radius);
         text-align: center;
-        font-size: 0.875rem;
-        color: var(--muted);
+        font-size: var(--fs-base);
+        color: var(--text-muted);
         display: flex;
         justify-content: center;
         align-items: center;
         gap: 0.5rem;
+        flex-wrap: wrap;
     }
     .banner-link {
         background: none;

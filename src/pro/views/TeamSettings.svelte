@@ -178,7 +178,7 @@
             <div class="card-title mb-4">Create a Team</div>
             <p class="text-sm text-muted mb-3">Create a team to collaborate on shared projects with your teammates.</p>
             <div class="flex gap-2">
-                <input type="text" class="input" bind:value={newTeamName} placeholder="Team name (e.g. CS201 Study Group)" style="flex:1">
+                <input type="text" class="input grow" bind:value={newTeamName} placeholder="Team name (e.g. CS201 Study Group)">
                 <button class="btn btn-primary" on:click={createTeam} disabled={!newTeamName.trim() || processing}>
                     {processing ? 'Creating...' : 'Create Team'}
                 </button>
@@ -186,7 +186,7 @@
         </div>
 
         {#if errorMsg}
-            <div class="text-sm mb-4" style="color:var(--danger)">{errorMsg}</div>
+            <div class="text-sm mb-4 text-danger">{errorMsg}</div>
         {/if}
     {:else}
         <!-- Team Info -->
@@ -197,7 +197,7 @@
                     <p class="text-xs text-muted mt-1">{$teamMembers.length} member{$teamMembers.length !== 1 ? 's' : ''} · Your role: <span class="role-badge role-{$currentTeam.memberRole}">{$currentTeam.memberRole}</span></p>
                 </div>
                 {#if !isOwner}
-                    <button class="btn btn-sm" style="color:var(--danger)" on:click={confirmLeaveTeam}>Leave Team</button>
+                    <button class="btn btn-sm text-danger" on:click={confirmLeaveTeam}>Leave Team</button>
                 {/if}
             </div>
         </div>
@@ -210,21 +210,21 @@
                     <div class="member-info">
                         <span class="assignee-badge">{member.displayName.charAt(0).toUpperCase()}</span>
                         <div>
-                            <div class="text-sm" style="font-weight:500">{member.displayName}</div>
+                            <div class="member-name text-sm">{member.displayName}</div>
                             <div class="text-xs text-muted">{member.userId === $profile?.id ? '(you)' : ''}</div>
                         </div>
                     </div>
                     <div class="member-actions">
                         <span class="role-badge role-{member.role}">{member.role}</span>
                         {#if isOwner && member.userId !== $profile?.id}
-                            <select class="input" style="width:auto; padding:0.125rem 0.375rem; font-size:0.75rem"
+                            <select class="input role-select"
                                     value={member.role}
                                     on:change={(e) => changeRole(member, e.target.value)}>
                                 <option value="member">Member</option>
                                 <option value="admin">Admin</option>
                                 <option value="owner">Owner</option>
                             </select>
-                            <button class="btn btn-sm" style="color:var(--danger); padding:0.125rem 0.5rem; font-size:0.75rem"
+                            <button class="btn btn-sm text-danger"
                                     on:click={() => confirmRemoveMember(member)}>Remove</button>
                         {/if}
                     </div>
@@ -238,8 +238,8 @@
                 <div class="card-title mb-3">Invite Members</div>
                 <p class="text-xs text-muted mb-3">Invite teammates by email. They'll need to have a Clerify account to accept.</p>
                 <div class="flex gap-2 mb-3">
-                    <input type="email" class="input" bind:value={inviteEmail} placeholder="teammate@email.com" style="flex:1">
-                    <select class="input" bind:value={inviteRole} style="width:auto">
+                    <input type="email" class="input grow" bind:value={inviteEmail} placeholder="teammate@email.com">
+                    <select class="input select-auto" bind:value={inviteRole}>
                         <option value="member">Member</option>
                         <option value="admin">Admin</option>
                     </select>
@@ -249,11 +249,11 @@
                 </div>
 
                 {#if pendingInvites.length > 0}
-                    <div class="text-sm" style="font-weight:500; margin-bottom:0.5rem">Pending Invitations</div>
+                    <div class="member-name text-sm mb-2">Pending Invitations</div>
                     {#each pendingInvites as invite}
-                        <div class="member-row" style="padding:0.5rem 0">
+                        <div class="member-row row-flat">
                             <div class="text-sm">{invite.email} <span class="text-xs text-muted">({invite.role})</span></div>
-                            <button class="btn btn-sm" style="color:var(--danger); padding:0.125rem 0.5rem; font-size:0.75rem"
+                            <button class="btn btn-sm text-danger"
                                     on:click={() => cancelInvite(invite.id)}>Cancel</button>
                         </div>
                     {/each}
@@ -266,15 +266,14 @@
             <div class="card-title mb-3">Team Skills Profile</div>
             <p class="text-xs text-muted mb-3">Define your team's collective skills. When AI scores tasks for shared projects, it uses this instead of individual profiles.</p>
             {#if editingSkills}
-                <textarea class="textarea" bind:value={skillsDraft}
-                          placeholder="e.g., Team is strong in Python and React, weak in backend DevOps and database design..."
-                          style="min-height:100px"></textarea>
+                <textarea class="textarea skills-textarea" bind:value={skillsDraft}
+                          placeholder="e.g., Team is strong in Python and React, weak in backend DevOps and database design..."></textarea>
                 <div class="flex gap-2 mt-2">
                     <button class="btn btn-primary btn-sm" on:click={saveSkills}>Save</button>
                     <button class="btn btn-sm" on:click={() => editingSkills = false}>Cancel</button>
                 </div>
             {:else}
-                <p class="text-sm" style="white-space:pre-wrap">{($currentTeam.teamSkillsProfile || 'No skills profile set.')}</p>
+                <p class="description-text text-sm">{($currentTeam.teamSkillsProfile || 'No skills profile set.')}</p>
                 {#if isAdmin}
                     <button class="btn btn-sm mt-2" on:click={startEditSkills}>Edit Skills Profile</button>
                 {/if}
@@ -289,10 +288,10 @@
                 <p class="text-sm text-muted">No shared projects yet. Share a project from the Pro Dashboard.</p>
             {:else}
                 {#each $projects.filter(p => p.teamId === $currentTeam?.id) as proj}
-                    <div class="member-row" style="padding:0.5rem 0">
+                    <div class="member-row row-flat">
                         <span class="text-sm">{proj.title}</span>
                         {#if isOwner}
-                            <button class="btn btn-sm" style="color:var(--danger); padding:0.125rem 0.5rem; font-size:0.75rem"
+                            <button class="btn btn-sm text-danger"
                                     on:click={async () => { await teamService.unshareProject(proj.id); await storage.saveProject(proj); successMsg = 'Project unshared.'; }}>Unshare</button>
                         {/if}
                     </div>
@@ -302,8 +301,8 @@
 
         <!-- Danger Zone (Owner only) -->
         {#if isOwner}
-            <div class="card mb-4" style="border-color:var(--danger)">
-                <div class="card-title mb-3" style="color:var(--danger)">Danger Zone</div>
+            <div class="card card-danger mb-4">
+                <div class="card-title mb-3 text-danger">Danger Zone</div>
                 <button class="btn btn-danger btn-sm" on:click={() => {
                     confirmConfig = {
                         show: true,
@@ -327,79 +326,73 @@
     {/if}
 
     {#if successMsg}
-        <div class="text-sm mb-4" style="color:var(--success); font-weight:500">{successMsg}</div>
+        <div class="msg-success text-sm mb-4">{successMsg}</div>
     {/if}
     {#if errorMsg}
-        <div class="text-sm mb-4" style="color:var(--danger)">{errorMsg}</div>
+        <div class="text-sm mb-4 text-danger">{errorMsg}</div>
     {/if}
 </div>
 
 <ConfirmModal bind:show={confirmConfig.show} title={confirmConfig.title} message={confirmConfig.message} onConfirm={confirmConfig.onConfirm} />
 
 <style>
-    .animate-fade {
-        animation: fadeIn 0.3s ease;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
     .member-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 0.625rem 0;
+        padding: var(--space-3) 0;
         border-bottom: 1px solid var(--border-color);
     }
     .member-row:last-child {
         border-bottom: none;
     }
+    .row-flat {
+        padding: var(--space-2) 0;
+    }
     .member-info {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: var(--space-3);
     }
     .member-actions {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: var(--space-2);
     }
-    .assignee-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: var(--primary);
-        color: white;
-        font-size: 0.8125rem;
-        font-weight: 600;
-        flex-shrink: 0;
+    .member-name {
+        font-weight: 500;
     }
     .role-badge {
         display: inline-block;
-        padding: 0.125rem 0.5rem;
-        border-radius: 9999px;
-        font-size: 0.625rem;
+        padding: var(--space-1) var(--space-2);
+        border-radius: var(--radius-full);
+        font-size: var(--fs-xs);
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
-    .role-owner {
-        background: rgba(var(--primary-rgb, 79, 70, 229), 0.15);
-        color: var(--primary);
+    .grow {
+        flex: 1;
     }
-    .role-admin {
-        background: rgba(16, 185, 129, 0.15);
+    .select-auto {
+        width: auto;
+    }
+    .role-select {
+        width: auto;
+        padding: var(--space-1) var(--space-2);
+        font-size: var(--fs-xs);
+    }
+    .skills-textarea {
+        min-height: 100px;
+    }
+    .description-text {
+        white-space: pre-wrap;
+    }
+    .card-danger {
+        border-color: var(--danger);
+    }
+    .msg-success {
         color: var(--success);
-    }
-    .role-member {
-        background: var(--bg-other, #f3f4f6);
-        color: var(--text-muted);
-    }
-    .btn-sm {
-        padding: 0.25rem 0.75rem;
-        font-size: 0.75rem;
+        font-weight: 500;
     }
 </style>

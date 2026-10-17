@@ -79,11 +79,11 @@
 </script>
 
 <div class="flex justify-between items-center mb-4">
-    <h2>Task Manager</h2>
+    <h2 class="m-0">Task Manager</h2>
     <button class="btn" on:click={() => view.set('dashboard')}>Cancel</button>
 </div>
 
-<div class="card animate-fade">
+<div class="card card-static animate-fade">
     <div class="form-group">
         <label class="form-label" for="task-title">Title</label>
         <input id="task-title" type="text" class="input" bind:value={title} placeholder="What do you need to do?">
@@ -100,16 +100,16 @@
     </div>
 
     {#if errorText}
-        <div class="text-sm mt-4 mb-4" style="color: var(--danger); padding: 0.5rem; background: #fee2e2; border-radius:4px;">
+        <div class="error-box text-sm mt-4 mb-4">
             {errorText}
         </div>
     {/if}
 
     <div class="flex gap-4 mt-6">
-        <button class="btn btn-primary" style="flex:1;" on:click={handleSaveBasic}>
+        <button class="btn btn-primary flex-1" on:click={handleSaveBasic}>
             Save Quickly (Basic)
         </button>
-        <button class="btn" style="flex:1; border-color: var(--primary); color: var(--primary);" on:click={handleSaveAI}>
+        <button class="btn btn-outline flex-1" on:click={handleSaveAI}>
             Save + AI Priority Analysis
         </button>
     </div>
@@ -118,11 +118,13 @@
 <Spinner bind:show={loading} text={spinnerText} />
 
 <style>
-    .animate-fade {
-        animation: fadeIn 0.3s ease;
+    .flex-1 {
+        flex: 1;
     }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+    .error-box {
+        color: var(--danger);
+        background: var(--danger-surface);
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-sm);
     }
 </style>

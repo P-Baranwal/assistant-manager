@@ -214,18 +214,18 @@
             </div>
         </div>
         
-        <div class="card">
-            <div class="flex justify-between items-start">
-                <h2 style="margin:0">{detail.title}</h2>
+        <div class="card card-static">
+            <div class="flex justify-between items-start gap-3">
+                <h2 class="m-0">{detail.title}</h2>
                 {#if detail.entityType === 'assignment'}
-                    <span class="tag" style="background:{typeColors[detail.type]?.bg||''}; color:{typeColors[detail.type]?.text||''}">{detail.type}</span>
+                    <span class="tag tag-{(detail.type || 'other').toLowerCase()}">{detail.type}</span>
                 {:else}
                     <span class="tag tag-gray">Task</span>
                 {/if}
             </div>
             <div class="flex items-center gap-2 mt-2">
                 <label class="text-sm" for="detail-date">Deadline:</label>
-                <input id="detail-date" type="date" class="input" bind:value={detail.deadline} on:change={handleDateChange} style="width:auto; padding:0.25rem 0.5rem;">
+                <input id="detail-date" type="date" class="input input-inline" bind:value={detail.deadline} on:change={handleDateChange}>
             </div>
             
             <div class="detail-meta-grid">
@@ -239,7 +239,7 @@
                         <p class="text-sm text-muted mt-1">{detail.estimatedHoursReasoning}</p>
                     </div>
                 {/if}
-                <div class="detail-card" style="{isBoosted ? 'border-color:var(--primary)' : ''}">
+                <div class="detail-card" class:boosted={isBoosted}>
                     <strong>Priority: {isBoosted ? detail.boost.boostedPriorityScore : detail.priorityScore}</strong>
                     <p class="text-sm text-muted mt-1">{isBoosted ? detail.boost.reason : detail.priorityReasoning}</p>
                 </div>
@@ -247,16 +247,16 @@
 
             {#if detail.entityType === 'task' && detail.description}
                 <div class="mb-4">
-                    <h3 style="font-size:1rem; margin-bottom:0.5rem">Description</h3>
-                    <p class="text-sm" style="white-space: pre-wrap;">{detail.description}</p>
+                    <h3 class="section-title">Description</h3>
+                    <p class="text-sm pre-wrap">{detail.description}</p>
                 </div>
             {/if}
 
             {#if detail.entityType === 'assignment'}
-                <hr style="border:0; border-top:1px solid var(--border-color); margin: 1.5rem 0;">
+                <hr class="divider">
                 
                 <div class="flex justify-between items-center mb-4">
-                    <h3 style="font-size:1.125rem">Checklist</h3>
+                    <h3 class="section-title-lg">Checklist</h3>
                     <div class="text-sm text-muted">{detail.checklist.filter(x => x.done).length}/{detail.checklist.length}</div>
                 </div>
 
@@ -276,7 +276,7 @@
 
             {#if detail.status === 'done' && detail.estimatedHours}
                 <div class="accuracy-feedback mt-4">
-                    <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Time Accuracy</h3>
+                    <h3 class="section-title">Time Accuracy</h3>
                     {#if detail.actualHours > 0}
                         {@const variance = (detail.actualHours - detail.estimatedHours) / detail.estimatedHours * 100}
                         <div class="accuracy-comparison">
@@ -301,7 +301,7 @@
                         <div class="form-group mb-0">
                             <label class="text-sm" for="detail-actual-hours">Log actual hours spent:</label>
                             <div class="flex gap-2 mt-1">
-                                <input id="detail-actual-hours" type="number" class="input" bind:value={detail.actualHours} min="0" step="0.25" placeholder="Hours" style="width: 100px;">
+                                <input id="detail-actual-hours" type="number" class="input input-hours" bind:value={detail.actualHours} min="0" step="0.25" placeholder="Hours">
                                 <button class="btn btn-sm" on:click={commitUpdate}>Save</button>
                             </div>
                         </div>
@@ -309,11 +309,11 @@
                 </div>
             {/if}
             
-            <hr style="border:0; border-top:1px solid var(--border-color); margin: 1.5rem 0;">
+            <hr class="divider">
             
             {#if detail.status !== 'done' || isBoosted}
-                <div style="background:var(--bg-color); padding:1rem; border-radius:var(--radius);">
-                    <h3 style="font-size: 1rem; margin-bottom:0.5rem">Boost Priority</h3>
+                <div class="boost-panel">
+                    <h3 class="section-title">Boost Priority</h3>
                     {#if isBoosted}
                         <p class="text-sm mb-2 text-muted">Boosted: "{detail.boost.reason}"</p>
                         <button class="btn btn-danger" on:click={removeBoost}>Remove Boost</button>
@@ -333,7 +333,7 @@
             {/if}
 
             {#if errorMsg}
-                <div class="text-sm mt-4" style="color: var(--danger); padding: 0.5rem; background: #fee2e2; border-radius:4px;">{errorMsg}</div>
+                <div class="error-box text-sm mt-4">{errorMsg}</div>
             {/if}
         </div>
     </div>
@@ -343,11 +343,43 @@
 <ConfirmModal bind:show={confirmConfig.show} title={confirmConfig.title} message={confirmConfig.message} onConfirm={confirmConfig.onConfirm} />
 
 <style>
-    .animate-fade {
-        animation: fadeIn 0.3s ease;
+    .section-title {
+        font-size: var(--fs-md);
+        font-weight: 600;
+        margin: 0 0 var(--space-2) 0;
     }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+    .section-title-lg {
+        font-size: var(--fs-lg);
+        font-weight: 600;
+        margin: 0;
+    }
+    .divider {
+        border: 0;
+        border-top: 1px solid var(--border-color);
+        margin: var(--space-6) 0;
+    }
+    .input-inline {
+        width: auto;
+        padding: var(--space-1) var(--space-2);
+    }
+    .input-hours {
+        width: 100px;
+    }
+    .boost-panel {
+        background: var(--bg-subtle);
+        padding: var(--space-4);
+        border-radius: var(--radius);
+    }
+    .pre-wrap {
+        white-space: pre-wrap;
+    }
+    .detail-card.boosted {
+        border-color: var(--primary);
+    }
+    .error-box {
+        color: var(--danger);
+        background: var(--danger-surface);
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-sm);
     }
 </style>

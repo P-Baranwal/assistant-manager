@@ -88,25 +88,25 @@
                 disabled={processing}
             >
             <button class="btn btn-primary nl-submit-btn" on:click={handleSubmit} disabled={!inputText.trim() || processing} aria-label="Submit task">
-                <svg class="svg-icon" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                <svg class="svg-icon nl-submit-icon" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
             </button>
         </div>
     {:else}
         <div class="nl-preview-card animate-fade">
             <div class="nl-preview-header">
-                <span class="text-xs text-muted" style="font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">AI Extracted Task</span>
+                <span class="nl-preview-label text-xs text-muted">AI Extracted Task</span>
             </div>
             <div class="nl-preview-fields">
                 <div class="form-group mb-2">
                     <input type="text" class="input" bind:value={preview.title} placeholder="Task title">
                 </div>
                 <div class="flex gap-2">
-                    <select class="input" bind:value={preview.type} style="width: auto; flex: 0 0 auto;">
+                    <select class="input nl-field-inline" bind:value={preview.type}>
                         <option>Essay</option><option>Coding</option><option>Math</option>
                         <option>Research</option><option>Other</option>
                     </select>
-                    <input type="date" class="input" bind:value={preview.deadline} style="width: auto;">
-                    <input type="number" class="input" bind:value={preview.estimatedHours} placeholder="Hours" min="0.25" step="0.25" style="width: 80px;">
+                    <input type="date" class="input nl-field-inline" bind:value={preview.deadline}>
+                    <input type="number" class="input nl-field-hours" bind:value={preview.estimatedHours} placeholder="Hours" min="0.25" step="0.25">
                 </div>
                 {#if preview.notes}
                     <p class="text-xs text-muted mt-2">{preview.notes}</p>
@@ -120,7 +120,7 @@
     {/if}
 
     {#if errorMsg}
-        <div class="nl-error text-sm mt-2">{errorMsg}</div>
+        <div class="nl-error text-sm mt-2" role="alert">{errorMsg}</div>
     {/if}
 </div>
 
@@ -128,63 +128,73 @@
 
 <style>
     .nl-input-container {
-        margin-bottom: 1.25rem;
+        margin-bottom: var(--space-5);
     }
     .nl-input-row {
         display: flex;
-        gap: 0.5rem;
+        gap: var(--space-2);
     }
     .nl-input {
         flex: 1;
-        padding: 0.75rem 1rem;
+        padding: var(--space-3) var(--space-4);
         background: var(--surface-color);
         color: var(--text-main);
         border: 1px solid var(--border-color);
         border-radius: var(--radius);
-        font-size: 0.9375rem;
+        font-size: var(--fs-md);
         transition: var(--transition);
     }
     .nl-input:focus {
         border-color: var(--primary);
-        box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+        box-shadow: var(--ring);
     }
     .nl-input::placeholder {
         color: var(--text-light);
     }
     .nl-submit-btn {
-        padding: 0.75rem;
+        padding: var(--space-3);
         flex-shrink: 0;
     }
+    .nl-submit-icon {
+        width: 18px;
+        height: 18px;
+    }
     .nl-preview-card {
-        background: var(--surface-color);
-        border: 1px solid var(--primary);
+        background: var(--surface-raised);
+        border: 1px solid var(--primary-border);
         border-radius: var(--radius);
-        padding: 1rem;
+        padding: var(--space-4);
     }
     .nl-preview-header {
-        margin-bottom: 0.75rem;
-        padding-bottom: 0.5rem;
+        margin-bottom: var(--space-3);
+        padding-bottom: var(--space-2);
         border-bottom: 1px solid var(--border-color);
+    }
+    .nl-preview-label {
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .nl-field-inline {
+        width: auto;
+        flex: 0 0 auto;
+    }
+    .nl-field-hours {
+        width: 80px;
+        flex: 0 0 auto;
     }
     .nl-preview-actions {
         display: flex;
         justify-content: flex-end;
-        gap: 0.5rem;
-        margin-top: 0.75rem;
-        padding-top: 0.75rem;
+        gap: var(--space-2);
+        margin-top: var(--space-3);
+        padding-top: var(--space-3);
         border-top: 1px solid var(--border-color);
     }
     .nl-error {
         color: var(--danger);
-        padding: 0.5rem 0.75rem;
-        background: rgba(239, 68, 68, 0.08);
-        border-radius: 4px;
-    }
-    .animate-fade {
-        animation: fadeIn 0.3s ease;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+        padding: var(--space-2) var(--space-3);
+        background: var(--danger-surface);
+        border-radius: var(--radius-xs);
     }
 </style>

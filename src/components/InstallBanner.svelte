@@ -52,21 +52,21 @@
 <style>
     .install-banner {
         position: fixed;
-        bottom: 1rem;
+        bottom: var(--space-4);
         left: 50%;
         transform: translateX(-50%);
-        background: var(--surface-color);
+        background: var(--surface-raised);
         border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 0.875rem 1rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        border-radius: var(--radius-lg);
+        padding: var(--space-3) var(--space-4);
+        box-shadow: var(--shadow-lg);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 1.5rem;
-        max-width: calc(100vw - 2rem);
+        gap: var(--space-6);
+        max-width: calc(100vw - var(--space-8));
         z-index: 1000;
-        animation: slideUp 0.3s ease-out;
+        animation: slideUp 0.3s var(--ease) backwards;
     }
     
     @keyframes slideUp {
@@ -83,7 +83,8 @@
     .install-content {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: var(--space-3);
+        min-width: 0;
     }
     
     .install-icon {
@@ -94,36 +95,32 @@
     .install-text {
         display: flex;
         flex-direction: column;
-        gap: 0.125rem;
+        gap: var(--space-1);
+        min-width: 0;
     }
     
     .install-title {
         font-weight: 600;
-        font-size: 0.875rem;
+        font-size: var(--fs-base);
         color: var(--text-main);
     }
     
     .install-subtitle {
-        font-size: 0.75rem;
+        font-size: var(--fs-xs);
         color: var(--text-muted);
     }
     
     .install-actions {
         display: flex;
-        gap: 0.5rem;
+        gap: var(--space-2);
         flex-shrink: 0;
-    }
-    
-    .btn-sm {
-        padding: 0.375rem 0.75rem;
-        font-size: 0.8125rem;
     }
     
     @media (max-width: 480px) {
         .install-banner {
             flex-direction: column;
             align-items: stretch;
-            gap: 0.75rem;
+            gap: var(--space-3);
         }
         
         .install-actions {

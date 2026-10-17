@@ -187,7 +187,7 @@
             {/if}
             {#if $currentTeam}
                 <div class="form-group mb-0">
-                    <label class="flex items-center gap-2 text-sm" style="cursor:pointer">
+                    <label class="label-clickable flex items-center gap-2 text-sm">
                         <input type="checkbox" bind:checked={shareWithTeam}>
                         Share this project with team
                     </label>
@@ -200,42 +200,42 @@
         <div class="card mb-4">
             <div class="card-title mb-4">Client Brief / Feature Request</div>
             <div class="form-group mb-0">
-                <textarea class="textarea" bind:value={briefText} placeholder="Paste the full brief, feature request, or project description here..." style="min-height:160px"></textarea>
+                <textarea class="textarea brief-textarea" bind:value={briefText} placeholder="Paste the full brief, feature request, or project description here..."></textarea>
             </div>
         </div>
 
-        <button class="btn btn-primary w-full justify-center" style="padding:0.75rem"
+        <button class="btn btn-primary btn-lg w-full justify-center"
                 on:click={generateBreakdown}
                 disabled={!briefText.trim()}>
             Generate Work Breakdown (AI)
         </button>
 
         {#if errorMsg}
-            <div class="text-sm mt-4 p-2 rounded" style="color: var(--danger); background: #fee2e2;">{errorMsg}</div>
+            <div class="form-error text-sm mt-4">{errorMsg}</div>
         {/if}
     </div>
 {:else}
     <div class="animate-fade">
-        <div class="card" style="border-color: var(--primary);">
+        <div class="card card-highlight">
             <div class="text-sm text-muted mb-2">Preview & Edit — {previewTasks.length} sub-tasks</div>
 
             <table class="wbs-table">
                 <thead>
                     <tr>
-                        <th style="width:50%">Task Title</th>
-                        <th style="width:20%">Est. Hours</th>
-                        <th style="width:20%">Impact (1-10)</th>
-                        <th style="width:10%"></th>
+                        <th class="wbs-col-title">Task Title</th>
+                        <th class="wbs-col-num">Est. Hours</th>
+                        <th class="wbs-col-num">Impact (1-10)</th>
+                        <th class="wbs-col-action"></th>
                     </tr>
                 </thead>
                 <tbody>
                     {#each previewTasks as task, i (task._id)}
                         <tr>
-                            <td><input type="text" class="input" bind:value={task.title} style="padding:0.375rem"></td>
-                            <td><input type="number" class="input" bind:value={task.estimatedHours} min="0.25" step="0.25" style="padding:0.375rem"></td>
-                            <td><input type="number" class="input" bind:value={task.impactScore} min="1" max="10" style="padding:0.375rem"></td>
+                            <td><input type="text" class="input wbs-input" bind:value={task.title}></td>
+                            <td><input type="number" class="input wbs-input" bind:value={task.estimatedHours} min="0.25" step="0.25"></td>
+                            <td><input type="number" class="input wbs-input" bind:value={task.impactScore} min="1" max="10"></td>
                             <td>
-                                <button class="btn btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem" on:click={() => deleteRow(i)}>✕</button>
+                                <button class="btn btn-danger btn-sm" on:click={() => deleteRow(i)} aria-label="Remove row">✕</button>
                             </td>
                         </tr>
                     {/each}
@@ -247,7 +247,7 @@
             </div>
 
             {#if errorMsg}
-                <div class="text-sm mt-4 p-2 rounded" style="color: var(--danger); background: #fee2e2;">{errorMsg}</div>
+                <div class="form-error text-sm mt-4">{errorMsg}</div>
             {/if}
 
             <div class="flex gap-2 justify-end mt-4">
@@ -261,27 +261,33 @@
 <Spinner bind:show={processing} text={spinnerText} />
 
 <style>
-    .animate-fade {
-        animation: fadeIn 0.3s ease;
+    .label-clickable {
+        cursor: pointer;
     }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+    .brief-textarea {
+        min-height: 160px;
     }
-    .w-full { width: 100%; }
-    .wbs-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 0.5rem;
+    .form-error {
+        color: var(--danger);
+        background: var(--danger-surface);
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-sm);
+        font-weight: 500;
     }
-    .wbs-table th, .wbs-table td {
-        padding: 0.5rem;
-        border: 1px solid var(--border-color);
-        text-align: left;
+    .card-highlight {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-sm);
     }
-    .wbs-table th {
-        background: var(--bg-color);
-        font-weight: 600;
-        font-size: 0.8125rem;
+    .wbs-col-title {
+        width: 50%;
+    }
+    .wbs-col-num {
+        width: 20%;
+    }
+    .wbs-col-action {
+        width: 10%;
+    }
+    .wbs-input {
+        padding: var(--space-2);
     }
 </style>
