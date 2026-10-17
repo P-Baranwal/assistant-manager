@@ -3,7 +3,7 @@
 # Clerify — Project Memory
 
 > Generated snapshot for LLM context. The codebase is a Svelte 5 + Supabase SaaS app,
-> currently at **Phase 7 complete** of the 10-phase `saas-conversion-plan.md`.
+> currently at **Phase 9 complete** of the 10-phase `saas-conversion-plan.md`.
 
 ---
 
@@ -13,9 +13,9 @@
 |---|---|
 | **App name** | Clerify (rebranded from "Assistant Manager") |
 | **Original purpose** | Personal offline task/assignment manager with local LLM analysis |
-| **Current state** | SaaS conversion in progress; Phases 0–8 shipped |
+| **Current state** | SaaS conversion in progress; Phases 0–9 shipped |
 | **Entry point** | `index.html` → `src/main.js` → `src/App.svelte` |
-| **App title in HTML** | Still "Assignment Manager" — needs updating to Clerify |
+| **App title in HTML** | "Clerify" ✅ |
 
 ---
 
@@ -31,7 +31,7 @@
 | Storage (authed) | Supabase Postgres via `SupabaseAdapter` |
 | Auth | Supabase Auth (email/password + Google + GitHub OAuth) |
 | Backend functions | Supabase Edge Functions (Deno runtime) |
-| Billing | Stripe (Checkout, Customer Portal, Webhooks) |
+| Billing | Paddle (Checkout overlay, webhooks, subscription management via REST API) |
 | PDF parsing | `pdf.js` loaded on-demand from CDN |
 | PWA | vite-plugin-pwa (Workbox), IndexedDB for offline queue |
 | Path alias | `$lib` → `src/lib/` (configured in `vite.config.js` + `jsconfig.json`) |
@@ -48,7 +48,7 @@
 ├── vite.config.js                     # Vite + Svelte plugin, $lib alias, PWA config
 ├── jsconfig.json                      # TS path aliases for svelte-check
 ├── eslint.config.js                   # ESLint flat config (JS + Svelte)
-├── package.json                       # deps: @supabase/supabase-js, @stripe/stripe-js, vite-plugin-pwa
+├── package.json                       # deps: @supabase/supabase-js, @paddle/paddle-js, vite-plugin-pwa
 ├── .env.production                    # Placeholder env vars (safe to commit)
 ├── saas-conversion-plan.md            # 10-phase SaaS roadmap (master spec)
 ├── CHANGELOG.md                       # Feature changelog
@@ -152,7 +152,7 @@
 │       ├── components/
 │       │   └── ProHeader.svelte       # Stats bar + nav (Projects/Blocked/ROI/Team/Notifications)
 │       └── views/
-│           ├── ProDashboard.svelte    # Kanban board (todo/in_progress/blocked/done) + ROI sidebar + activity feed
+│           ├── ProDashboard.svelte    # Kanban board (todo/in_progress/blocked/done) + ROI sidebar + activity feedLaguna S 2.1
 │           ├── ProAdd.svelte          # New project + AI WBS generator + share-with-team
 │           ├── ProDetail.svelte       # Task detail (impact/hours/blocker/variance) + comments + assignee
 │           ├── TeamSettings.svelte    # Team management (create/invite/members/skills)
@@ -160,18 +160,16 @@
 │
 ├── supabase/
 │   ├── functions/
-│   │   ├── create-checkout-session/index.ts
-│   │   ├── create-portal-session/index.ts
-│   │   ├── stripe-webhook/index.ts
+│   │   ├── paddle-webhook/index.ts
+│   │   ├── manage-subscription/index.ts
 │   │   ├── ai-proxy/index.ts
-│   │   └── weekly-digest/index.ts    # Scheduled email digest (Phase 6)
+│   │   ├── weekly-digest/index.ts    # Scheduled email digest (Phase 6)
 │   │   └── calendar-feed/index.ts    # iCal feed generation (Phase 9)
-│   │   ├── create-portal-session/index.ts
-│   │   └── stripe-webhook/index.ts
 │   └── migrations/
 │       ├── 00001_initial_schema.sql   # Profiles, projects, assignments, tasks, RLS, triggers, BYOK
 │       ├── 00002_billing_schema.sql   # tier→mode rename, subscription col, ai_usage table, RPCs
-│       └── 00005_calendar_sync_schema.sql   # Calendar feed token column + RPCs
+│       ├── 00005_calendar_sync_schema.sql   # Calendar feed token column + RPCs
+│       └── 00006_rename_billing_columns.sql # Stripe→Paddle: stripe_customer_id → billing_customer_id
 │
 └── .github/workflows/ci.yml
 ```
@@ -393,7 +391,7 @@ All models are normalized by functions in `src/lib/model.js`.
 | `projects:index` | `string[]` | Derived: `SELECT id FROM projects WHERE user_id=?` |
 | `projects:<uuid>` | object | `projects` row |
 
-The `SupabaseAdapter` ignores writes to `*:index` keys (they're computed from relational queries). It also strips billing-controlled fields from profile writes: `subscription`, `subscriptionStatus`, `stripeSubscriptionId`, `stripeCustomerId`, `currentPeriodEnd`.
+The `SupabaseAdapter` ignores writes to `*:index` keys (they're computed from relational queries). It also strips billing-controlled fields from profile writes: `subscription`, `subscription_status`, `billing_subscription_id`, `billing_customer_id`, `current_period_end`.
 
 For shared projects/tasks, the adapter relies on RLS policies for access control instead of client-side `user_id` filtering. The `user_id` field is preserved on updates to maintain original ownership.
 
@@ -471,16 +469,17 @@ The LLM is instructed to return only raw JSON (no markdown fences). `contract.js
 
 ```js
 SUBSCRIPTION_LIMITS = {
-  free:    { maxItems: 50,  aiMonthlyLimit: 10,  modes: ['student'], wbsGenerator: false, aiProxy: false },
-  student: { maxItems: -1,  aiMonthlyLimit: 100, modes: ['student'], wbsGenerator: false, aiProxy: true  },
-  pro:     { maxItems: -1,  aiMonthlyLimit: -1,  modes: ['student', 'professional'], wbsGenerator: true, aiProxy: true },
-  team:    { maxItems: -1,  aiMonthlyLimit: -1,  modes: ['student', 'professional'], wbsGenerator: true, aiProxy: true },
+  free:    { maxItems: 50,  aiMonthlyLimit: 0,   modes: ['student'], wbsGenerator: false, aiProxy: false, sharedProjects: false },
+  student: { maxItems: -1,  aiMonthlyLimit: 100, modes: ['student'], wbsGenerator: false, aiProxy: true,  sharedProjects: false },
+  pro:     { maxItems: -1,  aiMonthlyLimit: -1,  modes: ['student', 'professional'], wbsGenerator: true,  aiProxy: true,  sharedProjects: false },
+  team:    { maxItems: -1,  aiMonthlyLimit: -1,  modes: ['student', 'professional'], wbsGenerator: true,  aiProxy: true,  sharedProjects: true  },
 }
 ```
 
 - `-1` means unlimited
 - Professional mode requires `pro` or `team` subscription
 - WBS generator requires `pro` or `team`
+- Shared projects require `team` subscription
 
 ### 9.2 Billing Utility Functions (`src/lib/billing.js`)
 
@@ -493,28 +492,40 @@ canUseAI(subscription, monthlyUsage)        // boolean
 getMonthlyUsageRemaining(subscription, monthlyUsage)  // number or Infinity
 ```
 
-### 9.3 Stripe Integration
+### 9.3 Paddle Integration
 
 **Edge Functions** (Deno):
-- `create-checkout-session`: Gets/creates Stripe customer → creates Checkout Session → returns redirect URL
-- `create-portal-session`: Opens Stripe Customer Portal for subscription management
-- `stripe-webhook`: Handles `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+- `paddle-webhook`: Handles `subscription.created`, `subscription.updated`, `subscription.canceled` with HMAC-SHA256 signature verification
+- `manage-subscription`: Handles `cancel` (PATCH to schedule cancellation at next billing period) and `change_plan` (PATCH to schedule plan change at next billing period)
 
-Webhook updates `profiles` table columns: `subscription`, `subscription_status`, `stripe_subscription_id`, `current_period_end`.
+**Shared utility** (`supabase/functions/_shared/paddle-api.js`):
+- `paddleFetch()` — wraps `fetch()` with Bearer auth for Paddle REST API (`https://api.paddle.com/`)
+- `verifyPaddleWebhook()` — HMAC-SHA256 signature verification using Web Crypto API
 
-**Price ID mapping** (in `stripe-webhook/index.ts`):
+**Checkout flow**: Client-side via `@paddle/paddle-js`. `Pricing.svelte` initializes Paddle with `VITE_PADDLE_TOKEN` and `VITE_PADDLE_ENVIRONMENT`, fetches live prices via `PricePreview()`, and opens `Checkout.open()` with inline overlay on plan selection. Passes `customData.supabase_user_id` for webhook matching.
+
+Webhook updates `profiles` table columns (vendor-agnostic names): `billing_customer_id`, `billing_subscription_id`, `subscription`, `subscription_status`, `current_period_end`.
+
+**Price ID mapping** (in `paddle-webhook/index.ts`):
 ```
-STRIPE_PRICE_STUDENT env var → 'student' tier
-STRIPE_PRICE_PRO env var     → 'pro' tier
-STRIPE_PRICE_TEAM env var    → 'team' tier
+PADDLE_PRICE_STUDENT / PADDLE_PRICE_STUDENT_MONTHLY / PADDLE_PRICE_STUDENT_YEARLY → 'student' tier
+PADDLE_PRICE_PRO / PADDLE_PRICE_PRO_MONTHLY / PADDLE_PRICE_PRO_YEARLY              → 'pro' tier
+PADDLE_PRICE_TEAM                                                                    → 'team' tier
 ```
 
-**Env vars needed** (Stripe edge functions):
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_PRICE_STUDENT`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_TEAM`
-- `APP_URL` (for redirect URLs)
+**Env vars needed** (Paddle edge functions):
+- `PADDLE_API_KEY` — for REST API calls (manage-subscription)
+- `PADDLE_WEBHOOK_SECRET` — for webhook signature verification
+- `PADDLE_PRICE_STUDENT`, `PADDLE_PRICE_STUDENT_MONTHLY`, `PADDLE_PRICE_STUDENT_YEARLY`
+- `PADDLE_PRICE_PRO`, `PADDLE_PRICE_PRO_MONTHLY`, `PADDLE_PRICE_PRO_YEARLY`
+- `PADDLE_PRICE_TEAM`
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+
+**Client-side env vars**:
+- `VITE_PADDLE_TOKEN` — Paddle client-side token
+- `VITE_PADDLE_ENVIRONMENT` — `'sandbox'` or `'production'`
+- `VITE_PADDLE_PRICE_STUDENT_MONTHLY`, `VITE_PADDLE_PRICE_STUDENT_YEARLY`
+- `VITE_PADDLE_PRICE_PRO_MONTHLY`, `VITE_PADDLE_PRICE_PRO_YEARLY`
 
 ### 9.4 UI Enforcement
 
@@ -537,7 +548,7 @@ provider, ollama_url, ollama_model
 api_key_encrypted bytea          -- encrypted via pgcrypto
 mode text CHECK ('student'|'professional')
 subscription text CHECK ('free'|'student'|'pro'|'team')
-stripe_customer_id, stripe_subscription_id
+billing_customer_id, billing_subscription_id
 subscription_status text CHECK ('active'|'trialing'|'past_due'|'canceled'|'unpaid')
 current_period_end timestamptz
 default_project_id uuid → projects(id)
@@ -640,7 +651,6 @@ All tables have RLS enabled. Each table has a single "all operations" policy: `a
 # .env.local (dev) — never committed
 VITE_SUPABASE_URL=https://xxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
 VITE_AI_PROXY_URL=https://xxx.supabase.co/functions/v1/ai-proxy
 
 # .env.production (placeholder values committed — safe)
@@ -736,20 +746,18 @@ Dark mode: applied via `[data-theme='dark']` attribute on `<html>` OR `@media (p
 
 ## 17. Known Issues / TODOs in Current Code
 
-1. **`index.html` title** still says "Assignment Manager" — should be "Clerify"
-2. **Anthropic provider model field** uses `profile.ollamaModel` (should be a dedicated `profile.cloudModel` or per-provider field)
-3. **AI proxy Edge Function** requires server-side API keys: `GROQ_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` env vars on the Supabase project
-4. **`STRIPE_PRICE_STUDENT/PRO/TEAM`** are hardcoded placeholder strings in `Pricing.svelte` (`'STRIPE_PRICE_STUDENT'`) — must be replaced with real Stripe Price IDs
-5. **Team plan** is defined in `SUBSCRIPTION_LIMITS` and `stripe-webhook` but not shown in the Pricing page UI (only Free/Student/Pro shown)
-6. **`bugs.md`** and `new_features.md`** are gitignored; `bugs.md` is empty, `new_features.md` has raw feature ideas not yet implemented
-7. **`AGENTS.md`** is empty
-8. **`app.encryption_secret`** Postgres config var must be set in production for real BYOK encryption (dev fallback stores keys unencrypted)
-9. **`src/lib/storage.js`** imports `authStore` from `'./stores.js'` — circular dependency risk; works currently due to JS module evaluation order but should be monitored
-10. **Supabase `app:schemaVersion` key** — the `SupabaseAdapter.get()` returns `null` for unknown keys, so schema version tracking still effectively runs only against localStorage for guests; cloud users always re-run migration checks harmlessly
-11. **Weekly digest Edge Function** requires `RESEND_API_KEY` and `RESEND_FROM` env vars for email delivery; also requires a Supabase cron trigger to be configured
-12. **`weekly-digest` Edge Function** needs the user's email resolved from `auth.users` — currently the `to` field uses `profile.id` which must be mapped to email via a Supabase join or separate query
-13. **Browser extension** requires Supabase URL and anon key configuration in `packages/extension/src/background.js` and `packages/extension/src/popup.js`
-14. **Browser extension** icons need to be added to `packages/extension/icons/` directory (16px, 32px, 48px, 128px)
+1. **Anthropic provider model field** uses `profile.ollamaModel` (should be a dedicated `profile.cloudModel` or per-provider field)
+2. **AI proxy Edge Function** requires server-side API keys: `GROQ_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` env vars on the Supabase project
+3. **Paddle price IDs** in `.env.production` use placeholder strings (`pri_student_monthly`) — must be replaced with real Paddle Price IDs
+4. **Team plan** is defined in `SUBSCRIPTION_LIMITS` and `paddle-webhook` but not shown in the Pricing page UI (only Free/Student/Pro shown)
+5. **`bugs.md`** and `new_features.md`** are gitignored; `bugs.md` is empty, `new_features.md` has raw feature ideas not yet implemented
+6. **`app.encryption_secret`** Postgres config var must be set in production for real BYOK encryption (dev fallback stores keys unencrypted)
+7. **`src/lib/storage.js`** imports `authStore` from `'./stores.js'` — circular dependency risk; works currently due to JS module evaluation order but should be monitored
+8. **Supabase `app:schemaVersion` key** — the `SupabaseAdapter.get()` returns `null` for unknown keys, so schema version tracking still effectively runs only against localStorage for guests; cloud users always re-run migration checks harmlessly
+9. **Weekly digest Edge Function** requires `RESEND_API_KEY` and `RESEND_FROM` env vars for email delivery; also requires a Supabase cron trigger to be configured
+10. **`weekly-digest` Edge Function** needs the user's email resolved from `auth.users` — currently the `to` field uses `profile.id` which must be mapped to email via a Supabase join or separate query
+11. **Browser extension** requires Supabase URL and anon key configuration in `packages/extension/src/background.js` and `packages/extension/src/popup.js`
+12. **Browser extension** icons need to be added to `packages/extension/icons/` directory (16px, 32px, 48px, 128px)
 
 ---
 

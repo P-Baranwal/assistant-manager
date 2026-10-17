@@ -6,6 +6,7 @@
     import { supabase } from '$lib/supabase';
     import { SUBSCRIPTION_LIMITS, SUBSCRIPTION_LABELS } from '$lib/constants';
     import { canAccessFeature } from '$lib/billing';
+    import { LOCAL_ONLY } from '$lib/runtime';
     import { teamService } from '$lib/teams';
     import ConfirmModal from '../../components/ConfirmModal.svelte';
     import UpgradeBanner from '../../components/UpgradeBanner.svelte';
@@ -126,9 +127,9 @@
         };
     })();
 
-    $: canAccessProMode = p.subscription === 'pro' || p.subscription === 'team';
-    $: canUseProxy = canAccessFeature(p.subscription || 'free', 'aiProxy');
-    $: canUseSharedProjects = canAccessFeature(p.subscription || 'free', 'sharedProjects');
+    $: canAccessProMode = LOCAL_ONLY || p.subscription === 'pro' || p.subscription === 'team';
+    $: canUseProxy = !LOCAL_ONLY && canAccessFeature(p.subscription || 'free', 'aiProxy');
+    $: canUseSharedProjects = !LOCAL_ONLY && canAccessFeature(p.subscription || 'free', 'sharedProjects');
     $: monthlyUsageRemainingText = (() => {
         if (!p.subscription) return '';
         const limits = SUBSCRIPTION_LIMITS[p.subscription] || SUBSCRIPTION_LIMITS.free;
@@ -233,17 +234,17 @@
     }
 
     async function saveSettings() {
-        // Enforce mode restrictions based on subscription
-        if (!canAccessProMode && p.mode === 'professional') {
-            p.mode = 'student';
-        }
         await storage.setProfile(p);
         profile.set(p);
         
-        try {
-            const h = await fetchHealth(p);
-            providerReachable.set(h.reachable);
-        } catch(e) {}
+        if (!LOCAL_ONLY) {
+            try {
+                const h = await fetchHealth(p);
+                providerReachable.set(h.reachable);
+            } catch(e) {}
+        } else {
+            providerReachable.set(false);
+        }
         
         view.set('dashboard');
     }
@@ -295,6 +296,7 @@
 
     // ── Calendar Feed ──
     async function generateCalendarFeed() {
+        if (LOCAL_ONLY) return;
         if ($authStore.isGuest) {
             calendarError = 'Sign in to enable calendar sync.';
             return;
@@ -323,6 +325,7 @@
     }
 
     async function regenerateCalendarFeed() {
+        if (LOCAL_ONLY) return;
         if ($authStore.isGuest) return;
 
         calendarGenerating = true;
@@ -448,7 +451,7 @@
 </div>
 
 <div class="card mb-4 animate-fade">
-    <div class="card-title mb-4">Subscription & Interface</div>
+    <div class="card-title mb-4">{LOCAL_ONLY ? 'Interface Settings' : 'Subscription & Interface'}</div>
     <div class="form-group mb-4">
         <label class="form-label">Interface Mode</label>
         <div class="flex flex-col gap-2 mt-2">
@@ -479,8 +482,9 @@
     {/if}
 </div>
 
+{#if !LOCAL_ONLY}
 <div class="card mb-4 animate-fade">
-    <div class="card-title mb-4">Billing</div>
+    <div class="card-title mb-4">Subscription & Billing</div>
     {#if $authStore.isGuest}
         <p class="text-sm text-muted mb-3">Sign up to manage your subscription and unlock premium features.</p>
         <button class="btn btn-primary" on:click={() => view.set('auth')}>Sign Up Free</button>
@@ -513,6 +517,7 @@
         </div>
     {/if}
 </div>
+{/if}
 
 <div class="card mb-4 animate-fade">
     <div class="card-title mb-4">Theme Preferences</div>
@@ -549,7 +554,7 @@
                 {/if}
             </p>
         </div>
-    {:else}
+    {:else if !LOCAL_ONLY}
         <div class="proxy-locked mb-3">
             <div class="flex items-center gap-2 mb-2">
                 <span class="text-sm" style="font-weight:500;">🔒 Clerify AI Proxy</span>
@@ -567,19 +572,21 @@
         </div>
     {/if}
 
-    {#if !p.useProxy || !canUseProxy}
+    {#if LOCAL_ONLY || !p.useProxy || !canUseProxy}
         <div class="byok-config" class:mt-3={canUseProxy}>
             {#if canUseProxy}
                 <div style="border-top:1px solid var(--border-color); padding-top:0.75rem; margin-top:0.5rem;"></div>
             {/if}
             <div class="form-group">
                 <label class="form-label" for="set-provider">Provider</label>
-                <select id="set-provider" class="input" bind:value={p.provider}>
-                    <option value="ollama">Ollama (Local)</option>
-                    <option value="anthropic">Anthropic (Claude)</option>
-                    <option value="openai">OpenAI (GPT-4)</option>
-                    <option value="gemini">Google (Gemini)</option>
-                    <option value="groq">Groq (Llama, Gemma)</option>
+                    <select id="set-provider" class="input" bind:value={p.provider}>
+                        <option value="ollama">Ollama (Local)</option>
+                    {#if !LOCAL_ONLY}
+                        <option value="anthropic">Anthropic (Claude)</option>
+                        <option value="openai">OpenAI (GPT-4)</option>
+                        <option value="gemini">Google (Gemini)</option>
+                        <option value="groq">Groq (Llama, Gemma)</option>
+                    {/if}
                 </select>
             </div>
 
@@ -702,7 +709,7 @@
 
 <div class="card mb-4 animate-fade">
     <div class="card-title mb-4">Data Management</div>
-    <p class="text-sm text-muted mb-4">{#if !$authStore.isGuest}Your data is synced to the cloud. Use these tools to create a local backup or restore from one.{:else}All your data is stored locally in the browser. Use these tools to back up or restore your data.{/if}</p>
+    <p class="text-sm text-muted mb-4">{#if LOCAL_ONLY}All your data is stored locally in the browser. Use these tools to back up or restore your data.{:else if !$authStore.isGuest}Your data is synced to the cloud. Use these tools to create a local backup or restore from one.{:else}All your data is stored locally in the browser. Use these tools to back up or restore your data.{/if}</p>
     
     <div class="flex gap-3 items-center flex-wrap">
         <button class="btn" on:click={handleExport}>
@@ -718,6 +725,7 @@
     {/if}
 </div>
 
+{#if !LOCAL_ONLY}
 <div class="card mb-4 animate-fade">
     <div class="card-title mb-4">Calendar Sync</div>
     {#if $authStore.isGuest}
@@ -789,8 +797,9 @@
         {/if}
     {/if}
 </div>
+{/if}
 
-{#if p.subscription === 'team'}
+{#if !LOCAL_ONLY && p.subscription === 'team'}
     <div class="card mb-4 animate-fade">
         <div class="card-title mb-4">Team Management</div>
         <p class="text-sm text-muted mb-3">Manage your team, invite members, and configure shared projects.</p>
@@ -798,7 +807,7 @@
     </div>
 {/if}
 
-{#if !$authStore.isGuest && !teamLoading && teamInvites.length > 0}
+{#if !LOCAL_ONLY && !$authStore.isGuest && !teamLoading && teamInvites.length > 0}
     <div class="card mb-4 animate-fade" style="border-color: var(--primary)">
         <div class="card-title mb-3">Team Invitations</div>
         {#each teamInvites as invite}

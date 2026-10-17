@@ -6,6 +6,7 @@
     import { supabase } from '$lib/supabase';
     import { teamService } from '$lib/teams';
     import { subscribeToTeam, unsubscribe as unsubscribeRealtime } from '$lib/realtime';
+    import { LOCAL_ONLY } from '$lib/runtime';
 
     // Student views
     import StudentHeader from './student/components/StudentHeader.svelte';
@@ -61,8 +62,8 @@
             const allProjects = (await Promise.all(pPromises)).filter(Boolean);
             projects.set(allProjects);
 
-            // 4. Load Team data if Team subscription
-            if (p.subscription === 'team') {
+            // Team data is a cloud-only feature.
+            if (!LOCAL_ONLY && p.subscription === 'team') {
                 try {
                     const teams = await teamService.getMyTeams();
                     if (teams.length > 0) {
@@ -89,8 +90,8 @@
     }
 
     onMount(async () => {
-        // Check for post-checkout redirect
-        if (typeof window !== 'undefined' && window.location.hash === '#welcome') {
+        // Checkout redirects are meaningful only in cloud mode.
+        if (!LOCAL_ONLY && typeof window !== 'undefined' && window.location.hash === '#welcome') {
             view.set('welcome');
             window.history.replaceState(null, '', window.location.pathname);
         }
@@ -98,34 +99,37 @@
         // 1. Storage Init
         await storage.init();
         
-        // 2. Listen to Supabase Auth State
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            authStore.set({
-                user: session?.user || null,
-                session: session || null,
-                isGuest: !session
-            });
-
-            // Reload data for either guest mode or user account mode
+        if (LOCAL_ONLY) {
+            // Keep the local instance deterministic and network-free. In
+            // particular, do not initialize Supabase auth or proxy health checks.
+            authStore.set({ user: null, session: null, isGuest: true });
+            if (['auth', 'pricing', 'welcome', 'team-settings'].includes($view)) view.set('dashboard');
             await loadData();
-
-            // Sync theme
             const currentTheme = await storage.getTheme();
             theme.set(currentTheme);
-            const isDark = currentTheme === 'dark' || (currentTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-
-            // Background Health Check
-            try {
-                const p = await storage.getProfile();
-                const health = await fetchHealth(p);
-                providerReachable.set(health.reachable);
-            } catch(err) {
-                console.warn('Background health check failed:', err);
-            }
-        });
-
-        authSubscription = subscription;
+            providerReachable.set(false);
+        } else {
+            const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+                authStore.set({
+                    user: session?.user || null,
+                    session: session || null,
+                    isGuest: !session
+                });
+                await loadData();
+                const currentTheme = await storage.getTheme();
+                theme.set(currentTheme);
+                const isDark = currentTheme === 'dark' || (currentTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+                try {
+                    const p = await storage.getProfile();
+                    const health = await fetchHealth(p);
+                    providerReachable.set(health.reachable);
+                } catch(err) {
+                    console.warn('Background health check failed:', err);
+                }
+            });
+            authSubscription = subscription;
+        }
     });
 
     onDestroy(() => {
@@ -147,7 +151,7 @@
     <div class="flex items-center justify-center p-8 text-muted">
         <div class="spinner" style="border-top-color: var(--primary);"></div>
     </div>
-{:else if $view === 'auth'}
+{:else if !LOCAL_ONLY && $view === 'auth'}
     <div class="app-layout">
         {#if $profile?.mode === 'professional'}
             <ProHeader />
@@ -161,16 +165,16 @@
 {:else if $profile?.mode === 'professional'}
     <ProHeader />
     
-    {#if $authStore.isGuest && ($assignments.length + $tasks.length) >= 3}
+    {#if !LOCAL_ONLY && $authStore.isGuest && ($assignments.length + $tasks.length) >= 3}
         <div class="sync-banner animate-fade">
             <span>Your data is saved locally on this device. <button on:click={() => view.set('auth')} class="banner-link">Sign up</button> to sync across devices.</span>
         </div>
     {/if}
 
     <main class="view fade-in">
-        {#if $view === 'pricing'}
+        {#if !LOCAL_ONLY && $view === 'pricing'}
             <Pricing />
-        {:else if $view === 'welcome'}
+        {:else if !LOCAL_ONLY && $view === 'welcome'}
             <Welcome />
         {:else if $view === 'dashboard'}
             <ProDashboard />
@@ -180,7 +184,7 @@
             <ProDetail />
         {:else if $view === 'settings'}
             <Settings />
-        {:else if $view === 'team-settings'}
+        {:else if !LOCAL_ONLY && $view === 'team-settings'}
             <TeamSettings />
         {:else if $view === 'week-plan'}
             <WeekPlan />
@@ -191,16 +195,16 @@
 {:else}
     <StudentHeader />
 
-    {#if $authStore.isGuest && ($assignments.length + $tasks.length) >= 3}
+    {#if !LOCAL_ONLY && $authStore.isGuest && ($assignments.length + $tasks.length) >= 3}
         <div class="sync-banner animate-fade">
             <span>Your data is saved locally on this device. <button on:click={() => view.set('auth')} class="banner-link">Sign up</button> to sync across devices.</span>
         </div>
     {/if}
 
     <main class="view fade-in">
-        {#if $view === 'pricing'}
+        {#if !LOCAL_ONLY && $view === 'pricing'}
             <Pricing />
-        {:else if $view === 'welcome'}
+        {:else if !LOCAL_ONLY && $view === 'welcome'}
             <Welcome />
         {:else if $view === 'dashboard'}
             <Dashboard />
@@ -214,7 +218,7 @@
             <TaskManager />
         {:else if $view === 'calendar'}
             <Calendar />
-        {:else if $view === 'team-settings'}
+        {:else if !LOCAL_ONLY && $view === 'team-settings'}
             <TeamSettings />
         {:else if $view === 'week-plan'}
             <WeekPlan />

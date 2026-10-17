@@ -1,6 +1,13 @@
 import { supabase } from './supabase.js';
 import { tasks, projects, teamActivity, notifications } from './stores.js';
-import { snakeToCamel } from './storage/supabase.adapter.js';
+import { LOCAL_ONLY } from './runtime.js';
+
+function snakeToCamel(row) {
+    return Object.fromEntries(Object.entries(row || {}).map(([key, value]) => [
+        key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase()),
+        value
+    ]));
+}
 
 let channel = null;
 
@@ -71,6 +78,7 @@ function handleNotificationChange(payload) {
 }
 
 export async function subscribeToTeam(teamId) {
+    if (LOCAL_ONLY) return;
     unsubscribe();
 
     const userId = (await supabase.auth.getUser()).data.user?.id;
@@ -105,6 +113,7 @@ export async function subscribeToTeam(teamId) {
 }
 
 export function unsubscribe() {
+    if (LOCAL_ONLY) return;
     if (channel) {
         supabase.removeChannel(channel);
         channel = null;

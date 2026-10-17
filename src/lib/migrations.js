@@ -1,17 +1,21 @@
 import { STORAGE_KEYS } from './constants.js';
 import { normalizeProfile, normalizeAssignment, normalizeTask } from './model.js';
 
-const LATEST_SCHEMA_VERSION = 4;
+export const LATEST_SCHEMA_VERSION = 4;
 
 /**
  * Runs pending schema migrations.
  * @param {Object} adapter - Storage adapter providing get/set operations (can be mocked for tests).
  */
 export async function runMigrations(adapter) {
-    let currentVersion = await adapter.get(STORAGE_KEYS.SCHEMA_VERSION) || 0;
+    let currentVersion = Number(await adapter.get(STORAGE_KEYS.SCHEMA_VERSION)) || 0;
+    const readIndex = async (key) => {
+        const value = await adapter.get(key);
+        return Array.isArray(value) ? value : [];
+    };
 
     if (currentVersion < 1) {
-        let index = await adapter.get(STORAGE_KEYS.INDEX_ASSIGNMENTS) || [];
+        let index = await readIndex(STORAGE_KEYS.INDEX_ASSIGNMENTS);
         for (const id of index) {
             let task = await adapter.get(`assignments:${id}`);
             if (task) {
@@ -30,7 +34,7 @@ export async function runMigrations(adapter) {
     }
 
     if (currentVersion < 2) {
-        let index = await adapter.get(STORAGE_KEYS.INDEX_ASSIGNMENTS) || [];
+        let index = await readIndex(STORAGE_KEYS.INDEX_ASSIGNMENTS);
         for (const id of index) {
             let task = await adapter.get(`assignments:${id}`);
             if (task) {
@@ -44,13 +48,7 @@ export async function runMigrations(adapter) {
     }
 
     if (currentVersion < 3) {
-        let profile = await adapter.get(STORAGE_KEYS.PROFILE) || {};
-        if (!profile.tier) {
-            profile.tier = 'student';
-            await adapter.set(STORAGE_KEYS.PROFILE, profile);
-        }
-
-        let tIndex = await adapter.get(STORAGE_KEYS.INDEX_TASKS) || [];
+        let tIndex = await readIndex(STORAGE_KEYS.INDEX_TASKS);
         for (const id of tIndex) {
             let task = await adapter.get(`tasks:${id}`);
             if (task) {
@@ -60,7 +58,7 @@ export async function runMigrations(adapter) {
         }
 
         const existingIdx = await adapter.get(STORAGE_KEYS.INDEX_PROJECTS);
-        if (!existingIdx) {
+        if (!Array.isArray(existingIdx)) {
             await adapter.set(STORAGE_KEYS.INDEX_PROJECTS, []);
         }
 
@@ -74,8 +72,8 @@ export async function runMigrations(adapter) {
 
         if (profile.tier && !profile.mode) {
             profile.mode = profile.tier;
-            delete profile.tier;
         }
+        delete profile.tier;
         if (!profile.mode) profile.mode = 'student';
         if (!profile.subscription) profile.subscription = 'free';
 

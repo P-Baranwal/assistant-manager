@@ -3,6 +3,7 @@
     import { storage } from '$lib/storage';
     import { undoStack } from '$lib/undoStack';
     import { teamService } from '$lib/teams';
+    import { LOCAL_ONLY } from '$lib/runtime';
     import Spinner from '../../components/Spinner.svelte';
     import ConfirmModal from '../../components/ConfirmModal.svelte';
 
@@ -30,7 +31,7 @@
         const res = await storage.getTask(id);
         if (res) {
             detail = res;
-            if (isSharedProject || hasTeam) {
+            if (!LOCAL_ONLY && (isSharedProject || hasTeam)) {
                 await loadComments();
             }
         }

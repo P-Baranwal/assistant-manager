@@ -1,21 +1,37 @@
-import { TYPES, STATUS, PRESETS, PROVIDER_NAMES, DIFFICULTY, PRIORITY, ENTITY_TYPES, TIERS, IMPACT, SUBSCRIPTION_TIERS } from './constants.js';
+import { TYPES, STATUS, PRESETS, PROVIDER_NAMES, DIFFICULTY, PRIORITY, TIERS, IMPACT, SUBSCRIPTION_TIERS } from './constants.js';
+import { LOCAL_ONLY } from './runtime.js';
+import { uuid } from './utils/id.js';
+
+function stringOr(value, fallback) {
+    return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+}
+
+function numberOr(value, fallback, min = -Infinity, max = Infinity) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.max(min, Math.min(max, parsed));
+}
+
+function integerOr(value, fallback, min = -Infinity, max = Infinity) {
+    return Math.round(numberOr(value, fallback, min, max));
+}
 
 export function normalizeProfile(p) {
     if (!p) p = {};
     return {
-        skills: p.skills || "",
+        skills: stringOr(p.skills, ""),
         priorityPreset: PRESETS.includes(p.priorityPreset) ? p.priorityPreset : "Balanced",
-        customPriorityRule: p.customPriorityRule || "",
-        provider: PROVIDER_NAMES.includes(p.provider) ? p.provider : "ollama",
-        ollamaUrl: p.ollamaUrl || "http://localhost:11434",
-        ollamaModel: p.ollamaModel || "qwen2.5-coder:7b",
-        apiKey: p.apiKey || "",
-        mode: TIERS.includes(p.mode) ? p.mode : 'student',
+        customPriorityRule: stringOr(p.customPriorityRule, ""),
+        provider: LOCAL_ONLY ? 'ollama' : (PROVIDER_NAMES.includes(p.provider) ? p.provider : "ollama"),
+        ollamaUrl: stringOr(p.ollamaUrl, "http://localhost:11434"),
+        ollamaModel: stringOr(p.ollamaModel, "qwen2.5-coder:7b"),
+        apiKey: stringOr(p.apiKey, ""),
+        mode: TIERS.includes(p.mode) ? p.mode : (p.tier === 'professional' ? 'professional' : 'student'),
         subscription: SUBSCRIPTION_TIERS.includes(p.subscription) ? p.subscription : 'free',
         defaultProjectId: p.defaultProjectId || null,
-        useProxy: !!p.useProxy,
+        useProxy: LOCAL_ONLY ? false : !!p.useProxy,
         teamId: p.teamId || null,
-        availableHoursPerDay: Math.max(1, Math.min(16, parseInt(p.availableHoursPerDay) || 6)),
+        availableHoursPerDay: integerOr(p.availableHoursPerDay, 6, 1, 16),
         weeklyDigestOptIn: p.weeklyDigestOptIn !== undefined ? !!p.weeklyDigestOptIn : true,
         calendarFeedToken: p.calendarFeedToken || null
     };
@@ -24,30 +40,30 @@ export function normalizeProfile(p) {
 export function normalizeAssignment(a) {
     if (!a) a = {};
     return {
-        id: a.id || null, // Will be enforced by storage if missing, but should be present.
+        id: a.id || null, // Storage assigns an ID when this is a new record.
         entityType: 'assignment',
-        title: a.title || "Untitled",
+        title: stringOr(a.title, "Untitled"),
         type: TYPES.includes(a.type) ? a.type : "Other",
-        deadline: a.deadline || null, // YYYY-MM-DD
+        deadline: typeof a.deadline === 'string' && a.deadline.trim() ? a.deadline.trim() : null, // YYYY-MM-DD
         status: STATUS.includes(a.status) ? a.status : "active",
         createdAt: a.createdAt || new Date().toISOString(),
         updatedAt: a.updatedAt || new Date().toISOString(),
         analyzedAt: a.analyzedAt || new Date().toISOString(),
         
         // AI fields
-        difficulty: Math.max(DIFFICULTY.MIN, Math.min(DIFFICULTY.MAX, parseInt(a.difficulty) || 5)),
-        difficultyReasoning: a.difficultyReasoning || "",
-        estimatedHours: Math.max(0, parseFloat(a.estimatedHours) || 1),
-        estimatedHoursReasoning: a.estimatedHoursReasoning || a.timeReasoning || "",
-        priorityScore: Math.max(PRIORITY.MIN, Math.min(PRIORITY.MAX, parseInt(a.priorityScore) || 50)),
-        priorityReasoning: a.priorityReasoning || "",
+        difficulty: integerOr(a.difficulty, 5, DIFFICULTY.MIN, DIFFICULTY.MAX),
+        difficultyReasoning: stringOr(a.difficultyReasoning, ""),
+        estimatedHours: numberOr(a.estimatedHours, 1, 0),
+        estimatedHoursReasoning: stringOr(a.estimatedHoursReasoning, stringOr(a.timeReasoning, "")),
+        priorityScore: integerOr(a.priorityScore, 50, PRIORITY.MIN, PRIORITY.MAX),
+        priorityReasoning: stringOr(a.priorityReasoning, ""),
         
         // Boost object
         boost: normalizeBoost(a.boost),
         
         // Checklist
         checklist: Array.isArray(a.checklist) ? a.checklist.map(normalizeChecklistItem) : [],
-        rawContent: a.rawContent || ""
+        rawContent: stringOr(a.rawContent, "")
     };
 }
 
@@ -56,15 +72,18 @@ function normalizeBoost(b) {
     return {
         active: !!b.active,
         reason: b.reason || null,
-        boostedPriorityScore: b.boostedPriorityScore !== undefined && b.boostedPriorityScore !== null ? parseInt(b.boostedPriorityScore) : null
+        boostedPriorityScore: b.boostedPriorityScore !== undefined && b.boostedPriorityScore !== null
+            ? integerOr(b.boostedPriorityScore, 0, PRIORITY.MIN, PRIORITY.MAX)
+            : null
     };
 }
 
 function normalizeChecklistItem(c) {
+    const isString = typeof c === 'string';
     return {
-        id: c.id,
-        text: typeof c === 'string' ? c : (c.text || ""),
-        done: !!c.done
+        id: isString ? uuid() : (c?.id || uuid()),
+        text: stringOr(isString ? c : c?.text, ""),
+        done: isString ? false : !!c?.done
     };
 }
 
@@ -73,10 +92,10 @@ export function normalizeTask(t) {
     const base = {
         id: t.id || null,
         entityType: 'task',
-        title: t.title || "Untitled",
-        description: t.description || "",
+        title: stringOr(t.title, "Untitled"),
+        description: stringOr(t.description, ""),
         status: STATUS.includes(t.status) ? t.status : "active",
-        priorityReasoning: t.priorityReasoning || "",
+        priorityReasoning: stringOr(t.priorityReasoning, ""),
         boost: normalizeBoost(t.boost),
         deadline: t.deadline || null,
         createdAt: t.createdAt || new Date().toISOString(),
@@ -84,12 +103,12 @@ export function normalizeTask(t) {
 
         // Pro fields — safe defaults mean existing student tasks are unaffected
         projectId: t.projectId || null,
-        actualHours: Math.max(0, parseFloat(t.actualHours) || 0),
-        estimatedHours: Math.max(0, parseFloat(t.estimatedHours) || 1),
-        impactScore: t.impactScore
-            ? Math.max(IMPACT.MIN, Math.min(IMPACT.MAX, parseInt(t.impactScore)))
+        actualHours: numberOr(t.actualHours, 0, 0),
+        estimatedHours: numberOr(t.estimatedHours, 1, 0),
+        impactScore: t.impactScore !== undefined && t.impactScore !== null && t.impactScore !== ''
+            ? integerOr(t.impactScore, IMPACT.MIN, IMPACT.MIN, IMPACT.MAX)
             : null,
-        blockerNote: t.blockerNote || null,
+        blockerNote: stringOr(t.blockerNote, null),
 
         // Collaboration fields
         assignedTo: t.assignedTo || null,
@@ -102,7 +121,7 @@ export function normalizeTask(t) {
         base.priorityScore = Math.min(PRIORITY.MAX, Math.max(PRIORITY.MIN, Math.round((base.impactScore / hoursFloor) * 10)));
         base.priorityReasoning = `ROI Priority: ${base.impactScore} impact vs ${base.estimatedHours}h estimated effort.`;
     } else {
-        base.priorityScore = Math.max(PRIORITY.MIN, Math.min(PRIORITY.MAX, parseInt(t.priorityScore) || 50));
+        base.priorityScore = integerOr(t.priorityScore, 50, PRIORITY.MIN, PRIORITY.MAX);
     }
 
     return base;
@@ -113,8 +132,8 @@ export function normalizeProject(p) {
     return {
         id: p.id || null,
         entityType: 'project',
-        title: p.title || 'Untitled Project',
-        clientContext: p.clientContext || '',
+        title: stringOr(p.title, 'Untitled Project'),
+        clientContext: stringOr(p.clientContext, ''),
         status: ['active', 'done'].includes(p.status) ? p.status : 'active',
         teamId: p.teamId || null,
         visibility: ['private', 'shared'].includes(p.visibility) ? p.visibility : 'private',

@@ -3,27 +3,42 @@ import { runMigrations } from './migrations.js';
 import { normalizeProfile, normalizeAssignment, normalizeTask, normalizeProject } from './model.js';
 import { uuid } from './utils/id.js';
 import { LocalAdapter } from './storage/local.adapter.js';
-import { SupabaseAdapter } from './storage/supabase.adapter.js';
 import { authStore, isOnline } from './stores.js';
 import { enqueueMutation, processQueue } from './offlineQueue.js';
+import { LOCAL_ONLY } from './runtime.js';
 
 const localAdapter = new LocalAdapter();
-const supabaseAdapter = new SupabaseAdapter();
+let supabaseAdapter = null;
+let cloudAdapterPromise = null;
+
+async function getCloudAdapter() {
+    if (LOCAL_ONLY) throw new Error('Cloud storage is disabled in local-only mode.');
+    if (!cloudAdapterPromise) {
+        cloudAdapterPromise = import('./storage/supabase.adapter.js').then(({ SupabaseAdapter }) => {
+            supabaseAdapter = new SupabaseAdapter();
+            return supabaseAdapter;
+        });
+    }
+    return cloudAdapterPromise;
+}
 
 let activeAdapter = localAdapter;
 let offlineQueueProcessing = false;
 
-// Listen to authState changes to dynamically swap adapters
-authStore.subscribe(state => {
-    if (state && state.user) {
-        activeAdapter = supabaseAdapter;
-    } else {
-        activeAdapter = localAdapter;
-    }
-});
+// Cloud mode is opt-in. Local-only mode never swaps adapters in response to
+// auth state and therefore never initializes the Supabase adapter.
+if (!LOCAL_ONLY) {
+    authStore.subscribe(async state => {
+        if (state?.user) {
+            activeAdapter = await getCloudAdapter();
+        } else {
+            activeAdapter = localAdapter;
+        }
+    });
+}
 
 // Process offline queue when coming back online
-isOnline.subscribe(async (online) => {
+if (!LOCAL_ONLY) isOnline.subscribe(async (online) => {
     if (online && !offlineQueueProcessing && activeAdapter === supabaseAdapter) {
         offlineQueueProcessing = true;
         try {
@@ -45,7 +60,7 @@ export const adapter = new Proxy({}, {
     get(target, prop) {
         return (...args) => {
             // For write operations on cloud adapter when offline, queue instead
-            if (activeAdapter === supabaseAdapter && !navigator.onLine && (prop === 'set' || prop === 'delete')) {
+            if (!LOCAL_ONLY && activeAdapter === supabaseAdapter && typeof navigator !== 'undefined' && !navigator.onLine && (prop === 'set' || prop === 'delete')) {
                 const [key, value] = args;
                 return enqueueMutation({ type: prop, key, value });
             }
@@ -89,14 +104,14 @@ export const storage = {
     
     // ── Assignment CRUD ──
     async getIndex() { 
-        return (await adapter.get(STORAGE_KEYS.INDEX_ASSIGNMENTS)) || []; 
+        return this.getIndexFor(STORAGE_KEYS.INDEX_ASSIGNMENTS);
     },
     async getAssignment(id) { 
         const a = await adapter.get(`assignments:${id}`); 
         return a ? normalizeAssignment(a) : null;
     },
     async saveAssignment(task) {
-        const normTask = normalizeAssignment(task);
+        const normTask = normalizeAssignment({ ...task, id: task?.id || uuid() });
         await adapter.set(`assignments:${normTask.id}`, normTask);
         let idx = await this.getIndex();
         if (!idx.includes(normTask.id)) {
@@ -113,14 +128,14 @@ export const storage = {
     
     // ── Task CRUD ──
     async getTaskIndex() {
-        return (await adapter.get(STORAGE_KEYS.INDEX_TASKS)) || [];
+        return this.getIndexFor(STORAGE_KEYS.INDEX_TASKS);
     },
     async getTask(id) {
         const t = await adapter.get(`tasks:${id}`);
         return t ? normalizeTask(t) : null;
     },
     async saveTask(task) {
-        const normTask = normalizeTask(task);
+        const normTask = normalizeTask({ ...task, id: task?.id || uuid() });
         await adapter.set(`tasks:${normTask.id}`, normTask);
         let idx = await this.getTaskIndex();
         if (!idx.includes(normTask.id)) {
@@ -137,14 +152,14 @@ export const storage = {
 
     // ── Project CRUD ──
     async getProjectIndex() {
-        return (await adapter.get(STORAGE_KEYS.INDEX_PROJECTS)) || [];
+        return this.getIndexFor(STORAGE_KEYS.INDEX_PROJECTS);
     },
     async getProject(id) {
         const p = await adapter.get(`projects:${id}`);
         return p ? normalizeProject(p) : null;
     },
     async saveProject(project) {
-        const norm = normalizeProject(project);
+        const norm = normalizeProject({ ...project, id: project?.id || uuid() });
         await adapter.set(`projects:${norm.id}`, norm);
         let idx = await this.getProjectIndex();
         if (!idx.includes(norm.id)) {
@@ -162,9 +177,10 @@ export const storage = {
     // ── Export / Import ──
     async exportAll() {
         const data = {
-            _exportVersion: 1,
+            _exportVersion: 2,
             _exportedAt: new Date().toISOString(),
-            profile: await adapter.get(STORAGE_KEYS.PROFILE),
+            profile: normalizeProfile(await adapter.get(STORAGE_KEYS.PROFILE)),
+            theme: await adapter.get('theme'),
             assignments: {},
             tasks: {},
             projects: {},
@@ -187,47 +203,61 @@ export const storage = {
     },
 
     async importAll(data) {
-        if (!data || !data._exportVersion) {
+        if (!data || !Number.isFinite(Number(data._exportVersion)) || Number(data._exportVersion) < 1) {
             throw new Error('Invalid export file: missing version marker.');
         }
 
-        // Import profile
-        if (data.profile) {
-            await adapter.set(STORAGE_KEYS.PROFILE, normalizeProfile(data.profile));
-        }
+        const collections = [
+            { indexKey: STORAGE_KEYS.INDEX_ASSIGNMENTS, indexName: 'assignmentIndex', dataName: 'assignments', prefix: 'assignments:', normalize: normalizeAssignment },
+            { indexKey: STORAGE_KEYS.INDEX_TASKS, indexName: 'taskIndex', dataName: 'tasks', prefix: 'tasks:', normalize: normalizeTask },
+            { indexKey: STORAGE_KEYS.INDEX_PROJECTS, indexName: 'projectIndex', dataName: 'projects', prefix: 'projects:', normalize: normalizeProject }
+        ];
 
-        // Import assignments
-        if (data.assignmentIndex && Array.isArray(data.assignmentIndex)) {
-            await adapter.set(STORAGE_KEYS.INDEX_ASSIGNMENTS, data.assignmentIndex);
-            for (const id of data.assignmentIndex) {
-                if (data.assignments && data.assignments[id]) {
-                    await adapter.set(`assignments:${id}`, normalizeAssignment(data.assignments[id]));
+        // Restore is a replacement operation. Remove every record referenced by
+        // the current indexes before writing repaired indexes and records.
+        for (const collection of collections) {
+            const oldIndex = await this.getIndexFor(collection.indexKey);
+            for (const id of oldIndex) await adapter.delete(`${collection.prefix}${id}`);
+            if (LOCAL_ONLY) {
+                const allLocalData = await localAdapter.getAll();
+                for (const key of Object.keys(allLocalData)) {
+                    if (key.startsWith(collection.prefix)) await adapter.delete(key);
                 }
             }
+
+            const rawMap = data[collection.dataName];
+            const entries = Array.isArray(rawMap)
+                ? rawMap.map((value, index) => [value?.id || index, value])
+                : Object.entries(rawMap || {});
+            const sourceIds = Array.isArray(data[collection.indexName])
+                ? data[collection.indexName]
+                : entries.map(([id]) => id);
+            const recordsBySourceId = new Map(entries.map(([id, value]) => [String(id), value]));
+            const restoredIds = [];
+
+            for (const sourceId of sourceIds) {
+                const raw = recordsBySourceId.get(String(sourceId));
+                if (!raw || typeof raw !== 'object') continue;
+                const record = collection.normalize({ ...raw, id: raw.id || sourceId || uuid() });
+                const id = record.id || uuid();
+                record.id = id;
+                await adapter.set(`${collection.prefix}${id}`, record);
+                restoredIds.push(id);
+            }
+            await adapter.set(collection.indexKey, [...new Set(restoredIds)]);
         }
 
-        // Import tasks
-        if (data.taskIndex && Array.isArray(data.taskIndex)) {
-            await adapter.set(STORAGE_KEYS.INDEX_TASKS, data.taskIndex);
-            for (const id of data.taskIndex) {
-                if (data.tasks && data.tasks[id]) {
-                    await adapter.set(`tasks:${id}`, normalizeTask(data.tasks[id]));
-                }
-            }
-        }
+        await adapter.set(STORAGE_KEYS.PROFILE, normalizeProfile(data.profile));
+        if (data.theme) await adapter.set('theme', data.theme);
+    },
 
-        // Import projects
-        if (data.projectIndex && Array.isArray(data.projectIndex)) {
-            await adapter.set(STORAGE_KEYS.INDEX_PROJECTS, data.projectIndex);
-            for (const id of data.projectIndex) {
-                if (data.projects && data.projects[id]) {
-                    await adapter.set(`projects:${id}`, normalizeProject(data.projects[id]));
-                }
-            }
-        }
+    async getIndexFor(key) {
+        const value = await adapter.get(key);
+        return Array.isArray(value) ? value : [];
     },
 
     async migrateLocalToCloud() {
+        const cloudAdapter = await getCloudAdapter();
         const localData = await localAdapter.getAll();
         
         let assignmentsMigrated = 0;
@@ -236,10 +266,10 @@ export const storage = {
 
         // Migrate profile
         if (localData['profile']) {
-            await supabaseAdapter.set('profile', localData['profile']);
+            await cloudAdapter.set('profile', localData['profile']);
         }
         if (localData['theme']) {
-            await supabaseAdapter.set('theme', localData['theme']);
+            await cloudAdapter.set('theme', localData['theme']);
         }
 
         // Migrate assignments
@@ -247,7 +277,7 @@ export const storage = {
         for (const id of assignmentsIndex) {
             const assignment = localData[`assignments:${id}`];
             if (assignment) {
-                await supabaseAdapter.set(`assignments:${id}`, assignment);
+                await cloudAdapter.set(`assignments:${id}`, assignment);
                 assignmentsMigrated++;
             }
         }
@@ -257,7 +287,7 @@ export const storage = {
         for (const id of tasksIndex) {
             const task = localData[`tasks:${id}`];
             if (task) {
-                await supabaseAdapter.set(`tasks:${id}`, task);
+                await cloudAdapter.set(`tasks:${id}`, task);
                 tasksMigrated++;
             }
         }
@@ -267,7 +297,7 @@ export const storage = {
         for (const id of projectsIndex) {
             const project = localData[`projects:${id}`];
             if (project) {
-                await supabaseAdapter.set(`projects:${id}`, project);
+                await cloudAdapter.set(`projects:${id}`, project);
                 projectsMigrated++;
             }
         }

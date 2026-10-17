@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "type-check": "svelte-check --threshold error",
+    "test:e2e": "python3 -m unittest discover -s tests/e2e -p 'test_*.py'",
     "extension:dev": "cd packages/extension && npm run dev",
     "extension:build": "cd packages/extension && npm run build"
   },

@@ -1,20 +1,28 @@
 <script>
+    import { onMount } from 'svelte';
     import { profile, view, authStore } from '$lib/stores';
     import { SUBSCRIPTION_LABELS } from '$lib/constants';
     import { initializePaddle } from '@paddle/paddle-js';
+    import { LOCAL_ONLY } from '$lib/runtime';
 
     let paddleInstance = null;
     let paddleLoading = true;
 
-    initializePaddle({
-        token: import.meta.env.VITE_PADDLE_TOKEN,
-        environment: import.meta.env.VITE_PADDLE_ENVIRONMENT || 'sandbox',
-    }).then((instance) => {
-        paddleInstance = instance;
-        paddleLoading = false;
-    }).catch((err) => {
-        console.error('Paddle initialization failed:', err);
-        paddleLoading = false;
+    onMount(() => {
+        if (LOCAL_ONLY) {
+            paddleLoading = false;
+            return;
+        }
+        initializePaddle({
+            token: import.meta.env.VITE_PADDLE_TOKEN,
+            environment: import.meta.env.VITE_PADDLE_ENVIRONMENT || 'sandbox',
+        }).then((instance) => {
+            paddleInstance = instance;
+            paddleLoading = false;
+        }).catch((err) => {
+            console.error('Paddle initialization failed:', err);
+            paddleLoading = false;
+        });
     });
 
     let frequency = 'month';

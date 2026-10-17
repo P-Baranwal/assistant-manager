@@ -96,6 +96,12 @@ Assistant Manager supports five pluggable provider layers with active health che
    ```
 4. Open the localhost URL shown in your terminal.
 
+Local development is local-only by default. Set `VITE_LOCAL_ONLY=true` in
+`.env.local` to force the offline instance: it uses browser storage, enables
+both Student and Professional modes, and hides authentication, billing, team,
+calendar-feed, and AI-proxy controls. Cloud mode is an explicit opt-in with
+`VITE_LOCAL_ONLY=false` plus the cloud configuration below.
+
 ### AI Setup
 
 #### Using Ollama (Local & Offline)
